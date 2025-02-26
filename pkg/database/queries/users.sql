@@ -8,4 +8,4 @@ WHERE phone_number = $1 LIMIT 1;
 
 -- name: AddUser :exec
 INSERT INTO users (phone_number)
-VALUE ($1);
+VALUES ($1);
