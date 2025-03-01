@@ -1,0 +1,6 @@
+pkg/price/snapp/.env
+pkg/price/snapp/go.mod
+pkg/price/snapp/go.sum
+pkg/price/tapsi/go.mod
+pkg/price/tapsi/go.sum
+pkg/price/tapsi/.env
