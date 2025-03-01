@@ -1,8 +1,7 @@
-package main
+package snapp
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -46,13 +45,9 @@ func setHeader(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Referer", "https://app.snapp.taxi/pre-ride?utm_source=landing&utm_medium=request-button&utm_campaign=taxi&_gl=1*6bvi14*_gcl_au*MTEzNjQxNTUwMy4xNzQwNTc4NzI0")
 	req.Header.Set("Origin", "https://app.snapp.taxi")
-	req.Header.Set("Authorization", "Bearer " + os.Getenv("SNAPP_ACCESS_TOKEN"))
-	req.Header.Set("Cookie", "cookiesession1=" + os.Getenv("cookiesession1") +
-	"_clck=" + os.Getenv("_clck") + "_ga_Y4QV007ERR=" + os.Getenv("_ga_Y4QV007ERR") + "_ga=" + os.Getenv("_ga") +
-	"_ym_uid=" + os.Getenv("_ym_uid") + "_ym_d=" + os.Getenv("_ym_d") + "_ym_isad=" + os.Getenv("_ym_isad") + 
-	"_clsk=" + os.Getenv("_clsk"))
-}
-
-func main() {
-	fmt.Println(GetPrice("35.70427000000001", "51.344799999999964", "35.70507152245129", "51.35158062440473"))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("SNAPP_ACCESS_TOKEN"))
+	req.Header.Set("Cookie", "cookiesession1="+os.Getenv("cookiesession1")+
+		"_clck="+os.Getenv("_clck")+"_ga_Y4QV007ERR="+os.Getenv("_ga_Y4QV007ERR")+"_ga="+os.Getenv("_ga")+
+		"_ym_uid="+os.Getenv("_ym_uid")+"_ym_d="+os.Getenv("_ym_d")+"_ym_isad="+os.Getenv("_ym_isad")+
+		"_clsk="+os.Getenv("_clsk"))
 }
