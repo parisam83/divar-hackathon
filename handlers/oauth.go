@@ -1,0 +1,89 @@
+package handlers
+
+import (
+	"Realestate-POI/services"
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/google/uuid"
+)
+
+type OauthResourceType string
+
+const (
+	POST_ADDON_CREATE OauthResourceType = "POST_ADDON_CREATE"
+	USER_PHONE        OauthResourceType = "USER_PHONE"
+	OFFLINE_ACCESS    OauthResourceType = "offline_access"
+)
+
+type Scope struct {
+	resourceType OauthResourceType
+	resourceID   string
+}
+
+type oAuthHandler struct {
+	oauthService *services.OAuthService
+}
+
+func NewOAuthHandler(serv *services.OAuthService) *oAuthHandler {
+
+	return &oAuthHandler{
+		oauthService: serv,
+	}
+}
+
+func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
+
+	post_token := r.URL.Query().Get("post_token")
+	callback_url := r.URL.Query().Get("return_url")
+
+	if post_token == "" || callback_url == "" {
+		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
+		return
+	}
+
+	state := uuid.New().String()
+
+	oauthScopes := []Scope{
+		{resourceType: POST_ADDON_CREATE, resourceID: post_token},
+		{resourceType: USER_PHONE},
+	}
+	var scopes []string
+
+	for _, scope := range oauthScopes {
+		if scope.resourceID != "" {
+			scopes = append(scopes, fmt.Sprintf("%s.%s", scope.resourceType, scope.resourceID))
+		} else {
+			scopes = append(scopes, string(scope.resourceType))
+		}
+	}
+	// create a post with token in database????????/
+
+	redirect_url := h.oauthService.GenerateAuthURL(scopes, state)
+	// fmt.Println(redirect_url)
+	log.Println(redirect_url)
+	http.Redirect(w, r, redirect_url, http.StatusFound)
+}
+
+func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	state := r.URL.Query().Get("state")
+
+	if code == "" || state == "" {
+		http.Error(w, "code and state are required", http.StatusBadRequest)
+		return
+	}
+
+	//sending code to get the token
+	token, err := h.oauthService.ExchangeToken(r.Context(), code)
+	if err != nil {
+		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	accessToken := token.AccessToken
+	expires_in := token.Expiry
+	log.Println(accessToken)
+	log.Println(expires_in)
+
+}
