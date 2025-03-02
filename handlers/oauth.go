@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/sessions"
 )
 
 type OauthResourceType string
@@ -33,6 +35,8 @@ func NewOAuthHandler(serv *services.OAuthService) *oAuthHandler {
 	}
 }
 
+var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
+
 func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 
 	post_token := r.URL.Query().Get("post_token")
@@ -42,8 +46,24 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
 		return
 	}
+	oauthSession, err := store.Get(r, os.Getenv("OAUTH_SESSION_KEY"))
+	if err != nil {
+		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	//check if session existed before....
 	state := uuid.New().String()
+
+	// if there was no session appointed to the user and post, create a new session
+	oauthSession.Values["post_token"] = post_token
+	oauthSession.Values["callback_url"] = callback_url
+	oauthSession.Values["state"] = state
+	err = oauthSession.Save(r, w)
+	if err != nil {
+		http.Error(w, "Failed to set session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	oauthScopes := []Scope{
 		{resourceType: POST_ADDON_CREATE, resourceID: post_token},
@@ -61,7 +81,6 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	// create a post with token in database????????/
 
 	redirect_url := h.oauthService.GenerateAuthURL(scopes, state)
-	// fmt.Println(redirect_url)
 	log.Println(redirect_url)
 	http.Redirect(w, r, redirect_url, http.StatusFound)
 }
@@ -74,6 +93,12 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "code and state are required", http.StatusBadRequest)
 		return
 	}
+	//check if state is the same as the one in the session
+	// oauthSession, err := store.Get(r, os.Getenv("OAUTH_SESSION"))
+	// if err != nil {
+	// 	http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	//sending code to get the token
 	token, err := h.oauthService.ExchangeToken(r.Context(), code)
