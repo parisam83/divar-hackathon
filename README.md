@@ -1,4 +1,4 @@
-# Realestate Poi
+# Realestate POI
 
 
 
@@ -15,14 +15,14 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
-git remote add origin https://git.divar.cloud/divar/girls-hackathon/realestate-poi.git
+git remote add origin https://git.divar.cloud/mehdi.mostafavi/Realestate-POI.git
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
-- [ ] [Set up project integrations](https://git.divar.cloud/divar/girls-hackathon/realestate-poi/-/settings/integrations)
+- [ ] [Set up project integrations](https://git.divar.cloud/mehdi.mostafavi/Realestate-POI/-/settings/integrations)
 
 ## Collaborate with your team
 
