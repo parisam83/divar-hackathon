@@ -1,9 +1,8 @@
-package main
+package tapsi
 
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -130,8 +129,4 @@ func setHeader(req *http.Request) {
 		"accessToken="+os.Getenv("TAPSI_ACCESS_TOKEN")+
 		"refreshToken="+os.Getenv("TAPSI_REFRESH_TOKEN")+
 		"_clsk="+os.Getenv("_clsk"))
-}
-
-func main() {
-	fmt.Println(GetTapsiPriceEstimation(35.6895, 51.3890, 35.7741, 51.5112))
 }

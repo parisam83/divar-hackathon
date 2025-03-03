@@ -3,7 +3,6 @@ package snapp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -19,11 +18,11 @@ type snappPoint struct {
 
 type snappRequest struct {
 	Points         []*snappPoint `json:"points"`
-	VoucherCode    *string          `json:"voucher_code"`
-	ServiceTypes   []int        `json:"service_types"`
-	Priceriderecom bool         `json:"priceriderecom"`
-	Tag            string       `json:"tag"`
-	HurryRaised    int          `json:"hurryRaised"`
+	VoucherCode    *string       `json:"voucher_code"`
+	ServiceTypes   []int         `json:"service_types"`
+	Priceriderecom bool          `json:"priceriderecom"`
+	Tag            string        `json:"tag"`
+	HurryRaised    int           `json:"hurryRaised"`
 }
 
 type snappPrices struct {
@@ -96,8 +95,4 @@ func setHeader(req *http.Request) {
 		"_clck="+os.Getenv("_clck")+"_ga_Y4QV007ERR="+os.Getenv("_ga_Y4QV007ERR")+"_ga="+os.Getenv("_ga")+
 		"_ym_uid="+os.Getenv("_ym_uid")+"_ym_d="+os.Getenv("_ym_d")+"_ym_isad="+os.Getenv("_ym_isad")+
 		"_clsk="+os.Getenv("_clsk"))
-}
-
-func main2() {
-	fmt.Println(GetSnappPriceEstimation("35.6895", "51.3890", "35.7741", "51.5112"))
 }
