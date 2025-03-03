@@ -113,6 +113,34 @@ func GetTapsiPriceEstimation(originLat, originLong, destinationLat, destinationL
 		log.Fatal(err)
 	}
 
+	if resp.StatusCode != 200 {
+		log.Fatal("Status code is not 200")
+	}
+
+	if jsonData.Data == nil {
+		log.Fatal("Data is nil")
+	}
+
+	if len(jsonData.Data.Categories) == 0 {
+		log.Fatal("No categories found")
+	}
+
+	if len(jsonData.Data.Categories[0].Items) == 0 {
+		log.Fatal("No items found")
+	}
+
+	if jsonData.Data.Categories[0].Items[0].Service == nil {
+		log.Fatal("No service found")
+	}
+
+	if len(jsonData.Data.Categories[0].Items[0].Service.Prices) == 0 {
+		log.Fatal("No prices found")
+	}
+
+	if jsonData.Data.Categories[0].Items[0].Service.Prices[0].PassengerShare == 0 {
+		log.Fatal("Price is 0")
+	}
+
 	return jsonData.Data.Categories[0].Items[0].Service.Prices[0].PassengerShare
 }
 
