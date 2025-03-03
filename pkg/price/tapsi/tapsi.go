@@ -1,8 +1,9 @@
-package tapsi
+package main
 
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -10,17 +11,6 @@ import (
 
 	"github.com/joho/godotenv"
 )
-
-type tapsiRequest struct {
-	Origin       origin         `json:"origin"`
-	Destinations []destinations `json:"destinations"`
-	Rider        any            `json:"rider"`
-	HasReturn    bool           `json:"hasReturn"`
-	WaitingTime  int            `json:"waitingTime"`
-	Gateway      string         `json:"gateway"`
-	InitiatedVia string         `json:"initiatedVia"`
-	Metadata     metadata       `json:"metadata"`
-}
 
 type origin struct {
 	Latitude  float64 `json:"latitude"`
@@ -37,37 +27,48 @@ type metadata struct {
 	PreviewType string `json:"previewType"`
 }
 
+type tapsiRequest struct {
+	Origin       *origin         `json:"origin"`
+	Destinations []*destinations `json:"destinations"`
+	Rider        *string         `json:"rider"`
+	HasReturn    bool            `json:"hasReturn"`
+	WaitingTime  int             `json:"waitingTime"`
+	Gateway      string          `json:"gateway"`
+	InitiatedVia string          `json:"initiatedVia"`
+	Metadata     *metadata       `json:"metadata"`
+}
+
 type tapsiPrices struct {
 	PassengerShare int `json:"passengerShare"`
 }
 
 type tapsiService struct {
-	Prices []tapsiPrices `json:"prices"`
+	Prices []*tapsiPrices `json:"prices"`
 }
 
 type tapsiItems struct {
-	Service tapsiService `json:"service"`
+	Service *tapsiService `json:"service"`
 }
 
 type tapsiCategories struct {
-	Items []tapsiItems `json:"items"`
+	Items []*tapsiItems `json:"items"`
 }
 
 type tapsiData struct {
-	Categories []tapsiCategories `json:"categories"`
+	Categories []*tapsiCategories `json:"categories"`
 }
 
 type tapsiResponse struct {
-	Data tapsiData `json:"data"`
+	Data *tapsiData `json:"data"`
 }
 
 func GetTapsiPriceEstimation(originLat, originLong, destinationLat, destinationLong float64) int {
 	data := tapsiRequest{
-		Origin: origin{
+		Origin: &origin{
 			Latitude:  originLat,
 			Longitude: originLong,
 		},
-		Destinations: []destinations{
+		Destinations: []*destinations{
 			{
 				Latitude:  destinationLat,
 				Longitude: destinationLong,
@@ -78,7 +79,7 @@ func GetTapsiPriceEstimation(originLat, originLong, destinationLat, destinationL
 		WaitingTime:  0,
 		Gateway:      "CAB",
 		InitiatedVia: "WEB",
-		Metadata: metadata{
+		Metadata: &metadata{
 			FlowType:    "DESTINATION_FIRST",
 			PreviewType: "ORIGIN_FIRST",
 		},
@@ -129,4 +130,8 @@ func setHeader(req *http.Request) {
 		"accessToken="+os.Getenv("TAPSI_ACCESS_TOKEN")+
 		"refreshToken="+os.Getenv("TAPSI_REFRESH_TOKEN")+
 		"_clsk="+os.Getenv("_clsk"))
+}
+
+func main() {
+	fmt.Println(GetTapsiPriceEstimation(35.6895, 51.3890, 35.7741, 51.5112))
 }

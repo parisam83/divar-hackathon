@@ -3,6 +3,7 @@ package snapp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -17,8 +18,8 @@ type snappPoint struct {
 }
 
 type snappRequest struct {
-	Points         []snappPoint `json:"points"`
-	VoucherCode    any          `json:"voucher_code"`
+	Points         []*snappPoint `json:"points"`
+	VoucherCode    *string          `json:"voucher_code"`
 	ServiceTypes   []int        `json:"service_types"`
 	Priceriderecom bool         `json:"priceriderecom"`
 	Tag            string       `json:"tag"`
@@ -30,15 +31,15 @@ type snappPrices struct {
 }
 
 type snappData struct {
-	Prices []snappPrices `json:"prices"`
+	Prices []*snappPrices `json:"prices"`
 }
 type snappResponse struct {
-	Data snappData `json:"data"`
+	Data *snappData `json:"data"`
 }
 
 func GetSnappPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int {
 	data := snappRequest{
-		Points: []snappPoint{
+		Points: []*snappPoint{
 			{Lat: originLat, Lng: originLong},
 			{Lat: destinationLat, Lng: destinationLong},
 		},
@@ -95,4 +96,8 @@ func setHeader(req *http.Request) {
 		"_clck="+os.Getenv("_clck")+"_ga_Y4QV007ERR="+os.Getenv("_ga_Y4QV007ERR")+"_ga="+os.Getenv("_ga")+
 		"_ym_uid="+os.Getenv("_ym_uid")+"_ym_d="+os.Getenv("_ym_d")+"_ym_isad="+os.Getenv("_ym_isad")+
 		"_clsk="+os.Getenv("_clsk"))
+}
+
+func main2() {
+	fmt.Println(GetSnappPriceEstimation("35.6895", "51.3890", "35.7741", "51.5112"))
 }
