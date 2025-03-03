@@ -78,6 +78,22 @@ func GetSnappPriceEstimation(originLat, originLong, destinationLat, destinationL
 		log.Fatal(err)
 	}
 
+	if resp.StatusCode != 200 {
+		log.Fatal("Status code is not 200")
+	}
+
+	if jsonData.Data == nil {
+		log.Fatal("No data found")
+	}
+
+	if len(jsonData.Data.Prices) == 0 {
+		log.Fatal("No price found")
+	}
+
+	if jsonData.Data.Prices[0].Final == 0 {
+		log.Fatal("Price is 0")
+	}
+
 	return jsonData.Data.Prices[0].Final / 10
 }
 
