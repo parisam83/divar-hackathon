@@ -1,2 +1,1 @@
-pkg/price/snapp/.env
-pkg/price/tapsi/.env
+*.env
