@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Import the Postgres driver
+	_ "github.com/golang-migrate/migrate/v4/source/file"       // Import the 'file' source driver
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
@@ -98,6 +101,18 @@ func ConnectToDatabase(
 	}
 
 	fmt.Println("Connected to the database successfully.")
+
+	m, err := migrate.New("file://./pkg/database/migrations", pgURL.String())
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("migration initialization failed: %w", err)
+	}
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		pool.Close()
+		return nil, fmt.Errorf("migration failed: %w", err)
+	}
+
 	return nil, errors.Errorf("HIH")
 
 }
