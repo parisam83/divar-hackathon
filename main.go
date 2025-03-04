@@ -136,6 +136,24 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	// var configFilePath string
+	// var conf *config
+	// var err error
+	// viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	// viper.AutomaticEnv()
+
+	// // check if config file is not provided
+	// if configFilePath != "" {
+	// 	viper.SetConfigFile(configFilePath)
+	// 	if err := viper.ReadInConfig(); err != nil {
+	// 		logrus.Fatalln("failed to read config file.")
+	// 	}
+	// }
+	// conf, err = loadConfig()
+	// if err != nil {
+	// 	log.Fatal("failed to load configurations: %s", err)
+	// }
+
 	oauthService := services.NewOAuthService()
 	oauthHandler := handlers.NewOAuthHandler(oauthService)
 

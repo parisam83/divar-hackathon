@@ -22,11 +22,11 @@ type databaseConfig struct {
 	MaxConnIdleTimeMinutes       int
 }
 
-func loadConfig() (*config, error)[
+func loadConfig() (*config, error) {
 	var config config
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		return nil, err
 	}
 	return &config, nil
-]
+}

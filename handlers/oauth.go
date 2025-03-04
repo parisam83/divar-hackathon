@@ -51,7 +51,7 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//check if session existed before....
+	//check if session existed before....using database
 	state := uuid.New().String()
 
 	// if there was no session appointed to the user and post, create a new session
@@ -92,13 +92,14 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "code and state are required", http.StatusBadRequest)
 		return
 	}
-	//check if state is the same as the one in the session
+
 	oauthSession, err := store.Get(r, "oauth-session")
 	if err != nil {
 		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	//check if state is the same as the one in the session
 	sessionState, ok := oauthSession.Values["state"].(string)
 	if !ok || sessionState != state {
 		http.Error(w, "Invalid state", http.StatusBadRequest)
@@ -123,10 +124,11 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	log.Println(accessToken)
 	log.Println(expires_in)
 
-	//create the oauth object with session key , tokens and post
+	//create the oauth object with session key , tokens and post in database
 	sessionKey := uuid.New().String()
 	oauthSession.Values["sessionKey"] = sessionKey
 	oauthSession.Save(r, w)
+
 	//redirect to api for poi
 
 }
