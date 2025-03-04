@@ -1,11 +1,12 @@
 package main
 
 import (
-	"Realestate-POI/handlers"
-	"Realestate-POI/services"
 	"log"
 	"net/http"
 	"os"
+
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/handlers"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"

@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"Realestate-POI/services"
 	"fmt"
 	"log"
 	"net/http"
+
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
