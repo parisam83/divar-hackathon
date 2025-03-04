@@ -20,8 +20,8 @@ type AddMetroStationParams struct {
 	Longitude float64 `db:"longitude" json:"longitude"`
 }
 
-func (q *Queries) AddMetroStation(ctx context.Context, db DBTX, arg AddMetroStationParams) error {
-	_, err := db.Exec(ctx, addMetroStation, arg.Name, arg.Latitude, arg.Longitude)
+func (q *Queries) AddMetroStation(ctx context.Context, arg AddMetroStationParams) error {
+	_, err := q.db.Exec(ctx, addMetroStation, arg.Name, arg.Latitude, arg.Longitude)
 	return err
 }
 
@@ -30,8 +30,8 @@ SELECT name FROM metro_stations
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetMetroStationName(ctx context.Context, db DBTX, id int32) (string, error) {
-	row := db.QueryRow(ctx, getMetroStationName, id)
+func (q *Queries) GetMetroStationName(ctx context.Context, id int32) (string, error) {
+	row := q.db.QueryRow(ctx, getMetroStationName, id)
 	var name string
 	err := row.Scan(&name)
 	return name, err

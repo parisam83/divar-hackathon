@@ -22,7 +22,7 @@ type AddResultParams struct {
 	TransportationCost pgtype.Numeric `db:"transportation_cost" json:"transportation_cost"`
 }
 
-func (q *Queries) AddResult(ctx context.Context, db DBTX, arg AddResultParams) error {
-	_, err := db.Exec(ctx, addResult, arg.TokenID, arg.MetroStationID, arg.TransportationCost)
+func (q *Queries) AddResult(ctx context.Context, arg AddResultParams) error {
+	_, err := q.db.Exec(ctx, addResult, arg.TokenID, arg.MetroStationID, arg.TransportationCost)
 	return err
 }
