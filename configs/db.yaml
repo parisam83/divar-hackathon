@@ -1,12 +1,12 @@
 Database:
   Host: localhost
   Port: 5432
-  DBName: test-db
+  DBName: poi
   Username: postgres
-  Password: password
-  MaxConns: 100
-  MinConns: 20
+  Password: postgres
+  MaxConns: 5
+  MinConns: 2
   MaxConnLifetimeJitterMinutes: 1
   MaxConnLifetimeMinutes: 5
   MaxConnIdleTimeMinutes: 2
-  SSLMode: allow
+  SSLMode: disable
