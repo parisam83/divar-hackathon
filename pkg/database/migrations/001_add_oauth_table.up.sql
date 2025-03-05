@@ -5,7 +5,7 @@ CREATE TABLE oauth (
     access_token TEXT UNIQUE NOT NULL,
     refresh_token TEXT UNIQUE NOT NULL,
     expires_in TIMESTAMP NOT NULL,
-    post_token TEXT NOT NULL,
+    post_token TEXT UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
