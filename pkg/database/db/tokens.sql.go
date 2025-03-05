@@ -25,8 +25,8 @@ type AddTokenParams struct {
 	PostTokenExpiry pgtype.Timestamptz `db:"post_token_expiry" json:"post_token_expiry"`
 }
 
-func (q *Queries) AddToken(ctx context.Context, db DBTX, arg AddTokenParams) error {
-	_, err := db.Exec(ctx, addToken,
+func (q *Queries) AddToken(ctx context.Context, arg AddTokenParams) error {
+	_, err := q.db.Exec(ctx, addToken,
 		arg.UserID,
 		arg.UserToken,
 		arg.PostToken,

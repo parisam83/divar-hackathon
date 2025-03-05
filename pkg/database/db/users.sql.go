@@ -14,8 +14,8 @@ INSERT INTO users (phone_number)
 VALUES ($1)
 `
 
-func (q *Queries) AddUser(ctx context.Context, db DBTX, phoneNumber string) error {
-	_, err := db.Exec(ctx, addUser, phoneNumber)
+func (q *Queries) AddUser(ctx context.Context, phoneNumber string) error {
+	_, err := q.db.Exec(ctx, addUser, phoneNumber)
 	return err
 }
 
@@ -24,8 +24,8 @@ SELECT id FROM users
 WHERE phone_number = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserIDByPhoneNumber(ctx context.Context, db DBTX, phoneNumber string) (int32, error) {
-	row := db.QueryRow(ctx, getUserIDByPhoneNumber, phoneNumber)
+func (q *Queries) GetUserIDByPhoneNumber(ctx context.Context, phoneNumber string) (int32, error) {
+	row := q.db.QueryRow(ctx, getUserIDByPhoneNumber, phoneNumber)
 	var id int32
 	err := row.Scan(&id)
 	return id, err
@@ -36,8 +36,8 @@ SELECT phone_number FROM users
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserPhoneNumberByID(ctx context.Context, db DBTX, id int32) (string, error) {
-	row := db.QueryRow(ctx, getUserPhoneNumberByID, id)
+func (q *Queries) GetUserPhoneNumberByID(ctx context.Context, id int32) (string, error) {
+	row := q.db.QueryRow(ctx, getUserPhoneNumberByID, id)
 	var phone_number string
 	err := row.Scan(&phone_number)
 	return phone_number, err
