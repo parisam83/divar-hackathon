@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,9 +36,17 @@ func NewOAuthHandler(serv *services.OAuthService) *oAuthHandler {
 	}
 }
 
+type OAuthSession struct {
+	PostToken   string `json:"post_token"`
+	State       string `json:"state"`
+	CallbackURL string `json:"callback_url"`
+	SessionKey  string `json:"session_key"`
+}
+
 var store = sessions.NewCookieStore([]byte("oauth-session-secret"))
 
 func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
+	log.Println("AddonOauth called")
 
 	post_token := r.URL.Query().Get("post_token")
 	callback_url := r.URL.Query().Get("return_url")
@@ -53,21 +62,32 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check if session existed before....using database
-	state := uuid.New().String()
+	//TODO
 
-	// if there was no session appointed to the user and post, create a new session
-	oauthSession.Values["post_token"] = post_token
-	oauthSession.Values["callback_url"] = callback_url
-	oauthSession.Values["state"] = state
+	// if there was no session appointed to the user and post, create a new session and state
+	state := uuid.New().String()
+	session := &OAuthSession{
+		PostToken:   post_token,
+		State:       state,
+		CallbackURL: callback_url,
+	}
+	sessionJson, err := json.Marshal(session)
+	if err != nil {
+		http.Error(w, "Failed to marshal session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	oauthSession.Values["data"] = sessionJson
 	err = oauthSession.Save(r, w)
 	if err != nil {
 		http.Error(w, "Failed to set session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// choosing scopes
 	oauthScopes := []Scope{
 		{resourceType: POST_ADDON_CREATE, resourceID: post_token},
 		{resourceType: USER_PHONE},
+		// {resourceType: OFFLINE_ACCESS},
 	}
 	var scopes []string
 
@@ -78,21 +98,19 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 			scopes = append(scopes, string(scope.resourceType))
 		}
 	}
-	// create a post with token in database????????/
+
+	// create a post with token in database
 
 	redirect_url := h.oauthService.GenerateAuthURL(scopes, state)
 	log.Println(redirect_url)
 	http.Redirect(w, r, redirect_url, http.StatusFound)
+
 }
 
 func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
+	log.Println("OauthCallback called")
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
-
-	if code == "" || state == "" {
-		http.Error(w, "code and state are required", http.StatusBadRequest)
-		return
-	}
 
 	oauthSession, err := store.Get(r, "oauth-session")
 	if err != nil {
@@ -100,20 +118,35 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//check if state is the same as the one in the session
-	sessionState, ok := oauthSession.Values["state"].(string)
-	if !ok || sessionState != state {
-		http.Error(w, "Invalid state", http.StatusBadRequest)
+	// if code or state is not present, we redirect to the add page
+	//can we redirect to the user's add page?
+	if code == "" || state == "" {
+		// http.Error(w, "code and state are required", http.StatusBadRequest)
+		// post_token := oauthSession.Values["post_token"].(string)
+		redirectURL := fmt.Sprintf("https://divar.ir/")
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 		return
 	}
-	// deleting state from session because we dont need it after oauth
-	delete(oauthSession.Values, "state")
-	err = oauthSession.Save(r, w)
-	if err != nil {
-		http.Error(w, "Failed to save session after deleting state: "+err.Error(), http.StatusInternalServerError)
+	data, ok := oauthSession.Values["data"].([]byte)
+	if !ok {
+		http.Error(w, "no session data found", http.StatusBadRequest)
+		return
+
+	}
+
+	var session OAuthSession
+	if err := json.Unmarshal(data, &session); err != nil {
+		http.Error(w, "failed to decode session:"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	log.Println("session state is %s", session.State)
+
+	//check if state is the same as the one in the session
+	if session.State != state {
+		http.Error(w, "Invalid state", http.StatusBadRequest)
+		return
+	}
 	//sending code to get the token
 	token, err := h.oauthService.ExchangeToken(r.Context(), code)
 	if err != nil {
@@ -125,11 +158,26 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	log.Println(accessToken)
 	log.Println(expires_in)
 
-	//create the oauth object with session key , tokens and post in database
-	sessionKey := uuid.New().String()
-	oauthSession.Values["sessionKey"] = sessionKey
-	oauthSession.Save(r, w)
+	// deleting state from session because we dont need it after oauth
+	session.State = ""
+	//add sessionKey to the reuqest
+	session.SessionKey = uuid.New().String()
+	//update
+	updatedData, err := json.Marshal(session)
+	if err != nil {
+		log.Println("Session encoding failed:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	oauthSession.Values["data"] = updatedData
+	if err := oauthSession.Save(r, w); err != nil {
+		log.Println("Session save failed:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
+	http.Redirect(w, r, url, http.StatusSeeOther)
 
 	//redirect to api for poi
-
 }
