@@ -1,11 +1,2 @@
--- Create the oauth table
-CREATE TABLE oauth (
-    id SERIAL PRIMARY KEY,
-    session_id TEXT UNIQUE NOT NULL,
-    access_token TEXT UNIQUE NOT NULL,
-    refresh_token TEXT UNIQUE NOT NULL,
-    expires_in TIMESTAMP NOT NULL,
-    post_token TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Drop the oauth table
+DROP TABLE IF EXISTS oath;
