@@ -1,0 +1,8 @@
+-- Create the posts table
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    post_token TEXT NOT NULL UNIQUE,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    calculated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

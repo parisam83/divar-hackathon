@@ -1,7 +1,7 @@
 -- Create the poi table
 CREATE TABLE poi (
     id SERIAL PRIMARY KEY,
-    post_token TEXT NOT NULL UNIQUE REFERENCES oauth(post_token),
+    post_token TEXT NOT NULL REFERENCES posts(post_token),
     place_id INT REFERENCES places(id),
     distance NUMERIC,
     duration NUMERIC,
