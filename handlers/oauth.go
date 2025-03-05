@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
 
@@ -99,8 +100,6 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// create a post with token in database
-
 	redirect_url := h.oauthService.GenerateAuthURL(scopes, state)
 	log.Println(redirect_url)
 	http.Redirect(w, r, redirect_url, http.StatusFound)
@@ -154,7 +153,8 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	accessToken := token.AccessToken
-	expires_in := token.Expiry
+	expires_in := time.Unix(token.Expiry.Unix(), 0)
+	refreshToken := token.RefreshToken
 	log.Println(accessToken)
 	log.Println(expires_in)
 
@@ -175,6 +175,7 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	h.oauthService.AddOAuth(session.SessionKey, accessToken, refreshToken, session.PostToken, expires_in)
 
 	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
 	http.Redirect(w, r, url, http.StatusSeeOther)
