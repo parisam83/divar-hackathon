@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/handlers"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Import the Postgres driver
@@ -125,47 +127,48 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	// configFilePath := "./configs/db.yaml"
+	configFilePath := "./configs/db.yaml"
 
-	// // var err error
-	// viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	// viper.AutomaticEnv()
+	// var err error
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
-	// // check if config file is not provided
-	// if configFilePath != "" {
-	// 	viper.SetConfigFile(configFilePath)
-	// 	if err := viper.ReadInConfig(); err != nil {
-	// 		log.Fatalln("failed to read config file.")
-	// 	}
-	// }
+	// check if config file is not provided
+	if configFilePath != "" {
+		viper.SetConfigFile(configFilePath)
+		if err := viper.ReadInConfig(); err != nil {
+			log.Fatalln("failed to read config file.")
+		}
+	}
 
-	// var conf *config
-	// conf, err = loadConfig()
-	// if err != nil {
-	// 	log.Fatalf("failed to load configurations: %s\n", err)
-	// }
-	// conPool, err := ConnectToDatabase(
-	// 	context.Background(),
-	// 	conf.Database.Username,
-	// 	conf.Database.Password,
-	// 	conf.Database.Host,
-	// 	conf.Database.DBName,
-	// 	conf.Database.Port,
-	// 	conf.Database.SSLMode,
-	// 	conf.Database.MaxConns,
-	// 	conf.Database.MinConns,
-	// 	conf.Database.MaxConnLifetimeJitterMinutes,
-	// 	conf.Database.MaxConnLifetimeMinutes,
-	// 	conf.Database.MaxConnIdleTimeMinutes,
-	// )
-	// if err != nil {
-	// 	log.Fatal("Error in databse setup" + err.Error())
-	// }
-	// db.New(conPool)
+	var conf *config
+	conf, err = loadConfig()
+	if err != nil {
+		log.Fatalf("failed to load configurations: %s\n", err)
+	}
+	conPool, err := ConnectToDatabase(
+		context.Background(),
+		conf.Database.Username,
+		conf.Database.Password,
+		conf.Database.Host,
+		conf.Database.DBName,
+		conf.Database.Port,
+		conf.Database.SSLMode,
+		conf.Database.MaxConns,
+		conf.Database.MinConns,
+		conf.Database.MaxConnLifetimeJitterMinutes,
+		conf.Database.MaxConnLifetimeMinutes,
+		conf.Database.MaxConnIdleTimeMinutes,
+	)
+	if err != nil {
+		log.Fatal("Error in databse setup" + err.Error())
+	}
 
-	oauthService := services.NewOAuthService()
+	query := db.New(conPool)
+
+	oauthService := services.NewOAuthService(query)
 	kenarService := services.NewKenarService(
-		"eyJhbGciOiJSUzI1NiIsImtpZCI6InByaXZhdGVfa2V5XzIiLCJ0eXAiOiJKV1QifQ.eyJhcHBfc2x1ZyI6InBsYW5ldC1yaXBwbGUtbGVnZW5kIiwiYXVkIjoic2VydmljZXByb3ZpZGVycyIsImV4cCI6MTc0NjM1NDM3NiwianRpIjoiNDU4YzM0MTMtZjlhYy0xMWVmLTlhMTktZmFkODI3M2I1OGM1IiwiaWF0IjoxNzQxMTcwMzc2LCJpc3MiOiJkaXZhciIsInN1YiI6ImFwaWtleSJ9.KabES1DIR9hv6FEqbQ_G2jMm06Rb3pDxcKOLNDiC67q_9uoandGrWBg1hFNBDcp7_vkgXF77If9vGdYCSgoYXbRgVtESPPYdmY8v3tpl8LiayYR4a3PA9omvpeJIGLMe_YQoL3AeyIcaf2mLf5tTuRqIunbCJxTk1fWOGe5RddwZk44g2-0uZ69tm9YUM7cqL2r8I8stgYDB8d6OWSUeXzY3NxhQK_OH09qFQyHlO0UrpY0luyWgj2RrZiA3zMQYJMJLCJSOS-Ea1a-siSIyo_5LULi2JdRkbjJsMqNNY9AkH-vn4D7knBqRPSzwBxDymLhdt9MyEf1mh6L6UFeh3A", "https://api.divar.ir/v1/open-platform")
+		os.Getenv("KENAR_API_KEY"), "https://api.divar.ir/v1/open-platform", query)
 	kenarHandler := handlers.NewKenarHandler(kenarService)
 	oauthHandler := handlers.NewOAuthHandler(oauthService)
 

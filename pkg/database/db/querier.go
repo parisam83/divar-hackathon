@@ -6,17 +6,13 @@ package db
 
 import (
 	"context"
-
 )
 
 type Querier interface {
-	AddMetroStation(ctx context.Context, arg AddMetroStationParams) error
-	AddResult(ctx context.Context, arg AddResultParams) error
-	AddToken(ctx context.Context, arg AddTokenParams) error
-	AddUser(ctx context.Context, phoneNumber string) error
-	GetMetroStationName(ctx context.Context, id int32) (string, error)
-	GetUserIDByPhoneNumber(ctx context.Context, phoneNumber string) (int32, error)
-	GetUserPhoneNumberByID(ctx context.Context, id int32) (string, error)
+	AddOAuthData(ctx context.Context, arg AddOAuthDataParams) error
+	AddPOIResult(ctx context.Context, arg AddPOIResultParams) error
+	AddPlace(ctx context.Context, arg AddPlaceParams) error
+	AddPost(ctx context.Context, arg AddPostParams) error
 }
 
 var _ Querier = (*Queries)(nil)

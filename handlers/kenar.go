@@ -40,7 +40,7 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("post token is %s", session.PostToken)
+	log.Printf("post token is %s\n", session.PostToken)
 	k.kenarService.GetCoordinates(session.PostToken)
 
 }

@@ -1,7 +1,8 @@
--- Create the metro_stations table
-CREATE TABLE metro_stations (
+-- Create the places table
+CREATE TABLE places (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT UNIQUE NOT NULL,
+    type TEXT NOT NULL,
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL
 );
