@@ -2,11 +2,17 @@ Database:
   Host: localhost
   Port: 5432
   DBName: poi
-  Username: postgres
-  Password: postgres
+  Username: ${DB_USERNAME}
+  Password: ${DB_PASSWORD}
   MaxConns: 5
   MinConns: 2
   MaxConnLifetimeJitterMinutes: 1
   MaxConnLifetimeMinutes: 5
   MaxConnIdleTimeMinutes: 2
   SSLMode: disable
+App:
+  KENAR_APP_SLUG: "${KENAR_APP_SLUG}"  
+  KENAR_API_KEY: "${KENAR_API_KEY}"
+  OAUTH_SECRET: "${OAUTH_SECRET}"
+  OAUTH_SESSION_KEY: "${OAUTH_SESSION_KEY}"
+  PORT: "${PORT}"
