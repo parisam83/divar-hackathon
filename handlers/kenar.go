@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
+	"github.com/gorilla/sessions"
 )
 
 type KenarHandler struct {
@@ -13,7 +14,6 @@ type KenarHandler struct {
 }
 
 func NewKenarHandler(serv *services.KenarService) *KenarHandler {
-
 	return &KenarHandler{
 		kenarService: serv,
 	}
@@ -22,7 +22,7 @@ func NewKenarHandler(serv *services.KenarService) *KenarHandler {
 func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 	log.Println("Kenar called")
 	// how should i get the post token? using database or the sesion
-
+	store := sessions.NewCookieStore([]byte("oauth_session"))
 	oauthSession, err := store.Get(r, "oauth-session")
 	if err != nil {
 		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)

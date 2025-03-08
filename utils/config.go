@@ -18,7 +18,7 @@ type AppConfig struct {
 	ApiKey      string `mapstructure:"KENAR_API_KEY"`
 	OauthSecret string `mapstructure:"OAUTH_SECRET"`
 	SessionKey  string `mapstructure:"OAUTH_SESSION_KEY"`
-	ServerPort  int    `mapstructure:"PORT"`
+	ServerPort  string `mapstructure:"PORT"`
 }
 
 type DatabaseConfig struct {

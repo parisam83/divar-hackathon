@@ -28,12 +28,13 @@ type Scope struct {
 
 type oAuthHandler struct {
 	oauthService *services.OAuthService
+	store        *sessions.CookieStore
 }
 
 func NewOAuthHandler(serv *services.OAuthService) *oAuthHandler {
-
 	return &oAuthHandler{
 		oauthService: serv,
+		store:        sessions.NewCookieStore([]byte(serv.GetSessionKey())),
 	}
 }
 
@@ -44,7 +45,7 @@ type OAuthSession struct {
 	SessionKey  string `json:"session_key"`
 }
 
-var store = sessions.NewCookieStore([]byte("oauth-session-secret"))
+// var store = sessions.NewCookieStore([]byte("oauth-session-secret"))
 
 func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	log.Println("AddonOauth called")
@@ -56,7 +57,7 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
 		return
 	}
-	oauthSession, err := store.Get(r, "oauth-session")
+	oauthSession, err := h.store.Get(r, "Session")
 	if err != nil {
 		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -111,7 +112,7 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 
-	oauthSession, err := store.Get(r, "oauth-session")
+	oauthSession, err := h.store.Get(r, "Session")
 	if err != nil {
 		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -175,7 +176,7 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	h.oauthService.AddOAuth(session.SessionKey, accessToken, refreshToken, session.PostToken, expires_in)
+	h.oauthService.InsertOAuthData(session.SessionKey, accessToken, refreshToken, session.PostToken, expires_in)
 
 	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
 	http.Redirect(w, r, url, http.StatusSeeOther)

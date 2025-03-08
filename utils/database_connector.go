@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Postgres driver
 	_ "github.com/golang-migrate/migrate/v4/source/file"       //  'file' source driver
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -68,8 +68,7 @@ func ConnectToDatabase(
 		pool.Close()
 		return nil, fmt.Errorf("unable to reach database: %w", err)
 	}
-	log.Println("Connected to the database successfully.")
-	m, err := migrate.New("file://../Realestate-POI/pkg/database/migrations", pgURL.String())
+	m, err := migrate.New("file:///home/divar/Realestate-POI/pkg/database/migrations", pgURL.String())
 	if err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("migration initialization failed: %w", err)
@@ -79,6 +78,7 @@ func ConnectToDatabase(
 		pool.Close()
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}
+	log.Println("Connected to the database successfully.")
 	return pool, nil
 
 }
