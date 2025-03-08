@@ -10,8 +10,9 @@ import (
 )
 
 type Config struct {
-	Database DatabaseConfig
-	App      AppConfig
+	Database      DatabaseConfig
+	App           AppConfig
+	SessionConfig SessionConfig
 }
 type AppConfig struct {
 	AppSlug     string `mapstructure:"KENAR_APP_SLUG"`
@@ -33,6 +34,10 @@ type DatabaseConfig struct {
 	MaxConnLifetimeJitterMinutes int
 	MaxConnLifetimeMinutes       int
 	MaxConnIdleTimeMinutes       int
+}
+type SessionConfig struct {
+	AuthKey string
+	EncKey  string
 }
 
 func LoadConfig() (*Config, error) {
