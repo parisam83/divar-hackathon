@@ -10,9 +10,16 @@ Database:
   MaxConnLifetimeMinutes: 5
   MaxConnIdleTimeMinutes: 2
   SSLMode: disable
-App:
-  KENAR_APP_SLUG: "${KENAR_APP_SLUG}"  
-  KENAR_API_KEY: "${KENAR_API_KEY}"
-  OAUTH_SECRET: "${OAUTH_SECRET}"
-  OAUTH_SESSION_KEY: "${OAUTH_SESSION_KEY}"
-  PORT: "${PORT}"
+Kenar:
+  KenarAppSlug: "${KENAR_APP_SLUG}"  
+  KenarApiKey: "${KENAR_API_KEY}"
+  OauthSecret: "${OAUTH_SECRET}"
+  BaseUrl:
+
+Server:
+  Port: "${PORT}"
+
+Session:
+  SessionAuthKey: "${SESSION_AUTH_KEY}"
+  SessionEncKey:  "${SESSION_ENC_KEY}"
+

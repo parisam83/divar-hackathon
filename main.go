@@ -1,17 +1,11 @@
 package main
 
 import (
-	"context"
 	"log"
-	"net/http"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/handlers"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Postgres driver
 	_ "github.com/golang-migrate/migrate/v4/source/file"       //  'file' source driver
-	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -20,40 +14,43 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load configurations: %s\n", err)
 	}
-	conPool, err := utils.ConnectToDatabase(
-		context.Background(),
-		conf.Database.Username,
-		conf.Database.Password,
-		conf.Database.Host,
-		conf.Database.DBName,
-		conf.Database.Port,
-		conf.Database.SSLMode,
-		conf.Database.MaxConns,
-		conf.Database.MinConns,
-		conf.Database.MaxConnLifetimeJitterMinutes,
-		conf.Database.MaxConnLifetimeMinutes,
-		conf.Database.MaxConnIdleTimeMinutes,
-	)
-	if err != nil {
-		log.Fatal("Error in databse setup " + err.Error())
-	}
+	log.Println(conf.Session.AuthKey)
+	log.Println(conf.Kenar.ApiKey)
 
-	query := db.New(conPool)
+	// conPool, err := utils.ConnectToDatabase(
+	// 	context.Background(),
+	// 	conf.Database.Username,
+	// 	conf.Database.Password,
+	// 	conf.Database.Host,
+	// 	conf.Database.DBName,
+	// 	conf.Database.Port,
+	// 	conf.Database.SSLMode,
+	// 	conf.Database.MaxConns,
+	// 	conf.Database.MinConns,
+	// 	conf.Database.MaxConnLifetimeJitterMinutes,
+	// 	conf.Database.MaxConnLifetimeMinutes,
+	// 	conf.Database.MaxConnIdleTimeMinutes,
+	// )
+	// if err != nil {
+	// 	log.Fatal("Error in databse setup " + err.Error())
+	// }
 
-	oauthService := services.NewOAuthService(conf.App, query)
-	kenarService := services.NewKenarService(conf.App.ApiKey, "https://api.divar.ir/v1/open-platform", query)
-	kenarHandler := handlers.NewKenarHandler(kenarService)
-	oauthHandler := handlers.NewOAuthHandler(oauthService)
+	// query := db.New(conPool)
 
-	r := mux.NewRouter()
+	// oauthService := services.NewOAuthService(conf.App, query)
+	// kenarService := services.NewKenarService(conf.App.ApiKey, "https://api.divar.ir/v1/open-platform", query)
+	// kenarHandler := handlers.NewKenarHandler(kenarService)
+	// oauthHandler := handlers.NewOAuthHandler(oauthService)
 
-	r.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, World!"))
-	})
-	r.HandleFunc("/poi", kenarHandler.Poi)
-	r.HandleFunc("/addon/oauth", oauthHandler.AddonOauth)
-	r.HandleFunc("/oauth/callback", oauthHandler.OauthCallback)
-	port := conf.App.ServerPort
-	log.Printf("Server started on port %s", port)
-	http.ListenAndServe(":"+port, r)
+	// r := mux.NewRouter()
+
+	// r.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Write([]byte("Hello, World!"))
+	// })
+	// r.HandleFunc("/poi", kenarHandler.Poi)
+	// r.HandleFunc("/addon/oauth", oauthHandler.AddonOauth)
+	// r.HandleFunc("/oauth/callback", oauthHandler.OauthCallback)
+	// port := conf.App.ServerPort
+	// log.Printf("Server started on port %s", port)
+	// http.ListenAndServe(":"+port, r)
 }

@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-resty/resty/v2"
+
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 )
 
 type KenarService struct {
 	apiKey  string
-	client  *http.Client
+	client  *resty.Client
 	domain  string
 	queries *db.Queries
 }
@@ -21,7 +23,9 @@ type KenarService struct {
 func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
 	return &KenarService{
 		apiKey:  apiKey,
-		client:  http.DefaultClient,
+		client:  resty.New()
+				.SetHeader("Content-Type", "application/json")
+				.SetHeader("X-Api-Key",apiKey)
 		domain:  domain, //https://api.divar.ir/v1/open-platform
 		queries: queries,
 	}
@@ -34,8 +38,6 @@ func (k *KenarService) doRequest(method, endpoint string, payload io.Reader) (*h
 		log.Println("Error creating request:", err)
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Api-Key", k.apiKey)
 	return req, nil
 
 }
