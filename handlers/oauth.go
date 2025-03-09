@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/sessions"
 )
 
 type OauthResourceType string
@@ -28,13 +28,13 @@ type Scope struct {
 
 type oAuthHandler struct {
 	oauthService *services.OAuthService
-	store        *sessions.CookieStore
+	store        *utils.SessionStore
 }
 
-func NewOAuthHandler(serv *services.OAuthService) *oAuthHandler {
+func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService) *oAuthHandler {
 	return &oAuthHandler{
 		oauthService: serv,
-		store:        sessions.NewCookieStore([]byte(serv.GetSessionKey())),
+		store:        store,
 	}
 }
 
@@ -45,49 +45,81 @@ type OAuthSession struct {
 	SessionKey  string `json:"session_key"`
 }
 
-// var store = sessions.NewCookieStore([]byte("oauth-session-secret"))
+const (
+	SessionName = "Auth"
+	SessionKey  = "data"
+)
+
+func (h *oAuthHandler) getExistingSession(w http.ResponseWriter, r *http.Request) (*OAuthSession, error) {
+	oauthSession, err := h.store.Get(r, SessionName)
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Failed to get session: "+err.Error())
+	}
+
+	data, ok := oauthSession.Values[SessionKey].([]byte)
+	if !ok {
+		return nil, fmt.Errorf("%s", "No session data found ")
+
+	}
+
+	var session *OAuthSession
+	if err := json.Unmarshal(data, session); err != nil {
+		return nil, fmt.Errorf("%s", "failed to decode session:"+err.Error())
+	}
+	return session, nil
+}
+
+func (h *oAuthHandler) createNewSession(w http.ResponseWriter, r *http.Request, postToken string) (*OAuthSession, error) {
+	oauthSession, err := h.store.Get(r, SessionName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	state := uuid.New().String()
+	session := &OAuthSession{
+		PostToken: postToken,
+		State:     state,
+	}
+	sessionJson, err := json.Marshal(session)
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Failed to marshal session: " + err.Error())
+	}
+
+	oauthSession.Values["data"] = sessionJson
+	err = h.store.Save(r, w, oauthSession)
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Failed to set session: " + err.Error())
+	}
+	return session, nil
+
+}
 
 func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	log.Println("AddonOauth called")
 
-	post_token := r.URL.Query().Get("post_token")
+	postToken := r.URL.Query().Get("post_token")
 	callback_url := r.URL.Query().Get("return_url")
 
-	if post_token == "" || callback_url == "" {
+	if postToken == "" || callback_url == "" {
 		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
 		return
 	}
-	oauthSession, err := h.store.Get(r, "Session")
-	if err != nil {
-		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
-		return
+	// check existing session
+	session, err := h.getExistingSession(w, r)
+	if err == nil && session != nil {
+		//redirect
 	}
 
-	//check if session existed before....using database
-	//TODO
-
-	// if there was no session appointed to the user and post, create a new session and state
-	state := uuid.New().String()
-	session := &OAuthSession{
-		PostToken:   post_token,
-		State:       state,
-		CallbackURL: callback_url,
-	}
-	sessionJson, err := json.Marshal(session)
+	//create new session
+	session, err = h.createNewSession(w, r, postToken)
 	if err != nil {
-		http.Error(w, "Failed to marshal session: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	oauthSession.Values["data"] = sessionJson
-	err = oauthSession.Save(r, w)
-	if err != nil {
-		http.Error(w, "Failed to set session: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to create session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// choosing scopes
 	oauthScopes := []Scope{
-		{resourceType: POST_ADDON_CREATE, resourceID: post_token},
+		{resourceType: POST_ADDON_CREATE, resourceID: postToken},
 		{resourceType: USER_PHONE},
 		// {resourceType: OFFLINE_ACCESS},
 	}
@@ -101,7 +133,7 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	redirect_url := h.oauthService.GenerateAuthURL(scopes, state)
+	redirect_url := h.oauthService.GenerateAuthURL(scopes, session.State)
 	log.Println(redirect_url)
 	http.Redirect(w, r, redirect_url, http.StatusFound)
 
@@ -178,8 +210,8 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	h.oauthService.InsertOAuthData(session.SessionKey, accessToken, refreshToken, session.PostToken, expires_in)
 
-	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
-	http.Redirect(w, r, url, http.StatusSeeOther)
+	// url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
+	// http.Redirect(w, r, url, http.StatusSeeOther)
 
 	//redirect to api for poi
 }
