@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -10,18 +11,20 @@ import (
 )
 
 type Config struct {
-	Database      DatabaseConfig
-	App           AppConfig
-	SessionConfig SessionConfig
+	Database DatabaseConfig
+	Kenar    KenarConfig
+	Session  SessionConfig
+	Server   ServerConfig
 }
-type AppConfig struct {
-	AppSlug     string `mapstructure:"KENAR_APP_SLUG"`
-	ApiKey      string `mapstructure:"KENAR_API_KEY"`
-	OauthSecret string `mapstructure:"OAUTH_SECRET"`
-	SessionKey  string `mapstructure:"OAUTH_SESSION_KEY"`
-	ServerPort  string `mapstructure:"PORT"`
+type KenarConfig struct {
+	AppSlug     string `mapstructure:"KenarAppSlug"`
+	ApiKey      string `mapstructure:"KenarApiKey"`
+	OauthSecret string `mapstructure:"OauthSecret"`
+	BaseURL     string `mapstructure:"BaseUrl"`
 }
-
+type ServerConfig struct {
+	Port string `mapstructure:"Port"`
+}
 type DatabaseConfig struct {
 	Host                         string
 	Port                         int
@@ -36,30 +39,36 @@ type DatabaseConfig struct {
 	MaxConnIdleTimeMinutes       int
 }
 type SessionConfig struct {
-	AuthKey string
-	EncKey  string
+	AuthKey string `mapstructure:"SessionAuthKey"`
+	EncKey  string `mapstructure:"SessionEncKey"`
+}
+
+func (cfg *KenarConfig) Validate() error {
+
+	if cfg.AppSlug == "" || cfg.OauthSecret == "" {
+		return fmt.Errorf("missing required OAuth configurations")
+	}
+	return nil
 }
 
 func LoadConfig() (*Config, error) {
+
 	err := godotenv.Load("/home/divar/Realestate-POI/utils/.env")
 	if err != nil {
 		log.Fatal("Error loading .env file" + err.Error())
 	}
-	viper.SetConfigName("db")
+
+	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("../Realestate-POI/configs")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	// check if config file is not provided
-	viper.SetConfigName("db")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("../Realestate-POI/configs")
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatal("Error reading config file")
 	}
 	for _, key := range viper.AllKeys() {
-		// fmt.Println(key)
 		value := viper.GetString(key)
 		expanded := os.ExpandEnv(value)
 		viper.Set(key, expanded)
