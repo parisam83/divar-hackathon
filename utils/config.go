@@ -40,7 +40,7 @@ type DatabaseConfig struct {
 }
 type SessionConfig struct {
 	AuthKey string `mapstructure:"SessionAuthKey"`
-	EncKey  string `mapstructure:"SessionEncKey"`
+	// EncKey  string `mapstructure:"SessionEncKey"`
 }
 
 func (cfg *KenarConfig) Validate() error {
