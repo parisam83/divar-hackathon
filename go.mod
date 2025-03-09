@@ -5,6 +5,8 @@ go 1.23.5
 require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
+	github.com/joho/godotenv v1.5.1
+	github.com/spf13/viper v1.19.0
 	golang.org/x/oauth2 v0.27.0
 )
 
@@ -43,8 +45,5 @@ require (
 require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/golang-migrate/migrate/v4 v4.18.2
-	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/sessions v1.4.0
-	github.com/joho/godotenv v1.5.1
-	github.com/spf13/viper v1.19.0
 )
