@@ -89,7 +89,7 @@ func (n *Neshan) GetSearchResult(startLat, startLong float64) ([]Items, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Api-Key", "service.fee4f03fa6964054bd5d009dd4134ffd")
+	req.Header.Set("Api-Key", n.apiKey)
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
