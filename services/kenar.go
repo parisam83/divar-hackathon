@@ -4,47 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/go-resty/resty/v2"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 )
 
+type coordinate struct {
+	Latitude  string
+	Longitude string
+}
+
 type KenarService struct {
 	apiKey  string
 	client  *resty.Client
 	domain  string
 	queries *db.Queries
-}
-
-func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
-	return &KenarService{
-		apiKey:  apiKey,
-		client:  resty.New().SetHeader("Content-Type", "application/json").SetHeader("X-Api-Key", apiKey),
-		domain:  domain, //https://api.divar.ir/v1/open-platform
-		queries: queries,
-	}
-}
-func (k *KenarService) doRequest(method, endpoint string, payload io.Reader) (*http.Request, error) {
-
-	url := k.domain + endpoint
-	req, err := http.NewRequest(method, url, payload)
-	if err != nil {
-		log.Println("Error creating request:", err)
-		return nil, err
-	}
-	return req, nil
-
-}
-
-func (k *KenarService) GetOAuthBySessionId(sessionId string) (db.Oauth, error) {
-	return k.queries.GetOAuthBySessionId(context.Background(), sessionId)
-
 }
 
 type Widget struct {
@@ -58,7 +36,6 @@ type Row struct {
 	Data map[string]interface{}
 }
 
-// We implement json.Marshaler interface for custom marshaling
 func (r Row) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]map[string]interface{}{
 		r.Key: r.Data,
@@ -69,17 +46,27 @@ type Payload struct {
 	Widgets []Row `json:"widgets"`
 }
 
-// type Payload struct {
-// 	Widgets []Widget `json:"widgets"`
-// }
+func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
+	return &KenarService{
+		apiKey:  apiKey,
+		client:  resty.New().SetHeader("Content-Type", "application/json").SetHeader("X-Api-Key", apiKey),
+		domain:  domain, //https://api.divar.ir/v1/open-platform
+		queries: queries,
+	}
+}
 
-func (s *KenarService) PostWidgets(postToken string) {
+func (k *KenarService) GetOAuthBySessionId(sessionId string) (db.Oauth, error) {
+	return k.queries.GetOAuthBySessionId(context.Background(), sessionId)
+
+}
+
+func (k *KenarService) PostWidgets(postToken, accessToke, description string) {
 	log.Println("Post widgets")
 	payload := Payload{
 		Widgets: []Row{
-			{"title_row", map[string]interface{}{"text": "Sample Title"}},
+			{"title_row", map[string]interface{}{"text": "🚇 دسترسی به مترو"}},
 			{"subtitle_row", map[string]interface{}{"text": "Sample Subtitle"}},
-			{"description_row", map[string]interface{}{"text": "Sample Description", "has_divider": false, "expandable": false}},
+			{"description_row", map[string]interface{}{"text": fmt.Sprintf("%s", description), "has_divider": false, "expandable": false}},
 		},
 	}
 
@@ -88,18 +75,19 @@ func (s *KenarService) PostWidgets(postToken string) {
 		fmt.Println("Error marshaling JSON:", err)
 		return
 	}
-	// change ittttttttt
-	url := "https://api.divar.ir/v2/open-platform/addons/post/" + postToken
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(jsonData)))
+	resp, err := k.client.R().SetHeader("x-access-token", accessToke).SetBody(jsonData).Post(AddWidgetUrl + postToken)
 	if err != nil {
-		log.Println("Error creating request:", err)
-		return
+		log.Println("failed to post widgets %w", err)
 	}
+	if resp.StatusCode() != http.StatusOK {
+		log.Println(resp.StatusCode())
+		log.Println("unexpected code bruh!")
+	}
+
 	// req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Api-Key", s.apiKey)
-	req.Header.Set("x-access-token", "ory_at_oGndTdJE-Cfq8-fuAAmFuHI_itqopsk7Pr8zQiBkPEQ.2FxEb-7SlGNzhF5tnduTXgfUxqoFeOnNlEzwHnEbunw")
-	log.Println("=======================================")
-	fmt.Println(s.client)
+	// req.Header.Set("x-access-token", "ory_at_oGndTdJE-Cfq8-fuAAmFuHI_itqopsk7Pr8zQiBkPEQ.2FxEb-7SlGNzhF5tnduTXgfUxqoFeOnNlEzwHnEbunw")
+	// log.Println("=======================================")
+	// fmt.Println(s.client)
 	// res, err := s.cl
 	// log.Println(res.Status)
 	// log.Println(err)
@@ -120,11 +108,6 @@ func (s *KenarService) PostWidgets(postToken string) {
 	// 	return
 	// }
 
-}
-
-type coordinate struct {
-	Latitude  string
-	Longitude string
 }
 
 func (k *KenarService) GetCoordinates(postToken string) (*coordinate, error) {

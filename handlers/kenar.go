@@ -33,14 +33,15 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// sessionId := session.SessionKey
+	sessionId := session.SessionKey
+	log.Println(sessionId)
 	postToken := session.PostToken
-	// oauth, err := k.kenarService.GetOAuthBySessionId(sessionId)
+	oauth, err := k.kenarService.GetOAuthBySessionId(sessionId)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "no session found", http.StatusNotFound)
 		}
-		http.Error(w, "Could not fetch data based on the sessionId"+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Could not fetch data based on the sessionId "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -51,18 +52,33 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Couldn't fetch the coordinates "+err.Error(), http.StatusNotFound)
 	}
 	// log.Println(coordinates.Latitude)
-	result, err := pkg.GetSubwayStationHandler(coordinates.Latitude, coordinates.Longitude)
+	stationResult, err := pkg.GetSubwayStationHandler(coordinates.Latitude, coordinates.Longitude)
 
 	// result, err := pkg.GetSubwayStationHandler("35.705080137369734", "51.3493")
-	fmt.Println(result)
-
-	dest_lat := strconv.FormatFloat(result.StationLat, 'f', -1, 64)
-	dest_long := strconv.FormatFloat(result.StationLong, 'f', -1, 64)
+	fmt.Println(stationResult)
+	dest_lat := strconv.FormatFloat(stationResult.StationLat, 'f', -1, 64)
+	dest_long := strconv.FormatFloat(stationResult.StationLong, 'f', -1, 64)
 	// res, err := k.taxiService.GetPrice(coordinates.Latitude, coordinates.Longitude, dest_lat, dest_long)
-	res, err := k.taxiService.GetPrice(coordinates.Latitude, coordinates.Longitude, dest_lat, dest_long)
+	prices, err := k.taxiService.GetPrice(coordinates.Latitude, coordinates.Longitude, dest_lat, dest_long)
 	if err != nil {
 		http.Error(w, "Could no fetch prices to the station", http.StatusNotFound)
 	}
-	fmt.Println(res)
+	fmt.Println(prices)
+	descriptionText := fmt.Sprintf(
+		"نزدیک‌ترین ایستگاه مترو: %s\n"+
+			"فاصله تا ایستگاه: %s\n"+
+			"زمان رسیدن به ایستگاه: %s\n\n"+
+			"قیمت تخمینی تاکسی‌های آنلاین تا ایشتگاه مترو:\n"+
+			"اسنپ: %v تومان\n"+
+			"تپسی: %v تومان",
+		stationResult.ClosestStation,
+		stationResult.TotalDistance,
+		stationResult.TotalDuration,
+		prices["snapp"],
+		prices["tapsi"],
+	)
+	log.Println("=================================")
+	log.Println(descriptionText)
+	k.kenarService.PostWidgets(postToken, oauth.AccessToken, descriptionText)
 
 }

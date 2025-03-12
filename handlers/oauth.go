@@ -101,11 +101,10 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	session, err := h.store.GetExistingSession(w, r)
 	if err == nil && session != nil {
 		log.Println(session.SessionKey)
-		log.Println(session.PostToken)
 		log.Println("User has entered before?!")
 		url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
 		http.Redirect(w, r, url, http.StatusSeeOther)
-		return
+		// return
 	}
 	//create new session
 	session, err = h.store.CreateNewSession(w, r, postToken)
