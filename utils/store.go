@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 )
@@ -26,13 +27,10 @@ type OAuthSession struct {
 	SessionKey  string `json:"session_key"`
 }
 
-func NewSessionStore(cfg *SessionConfig) *SessionStore {
+func NewSessionStore(cfg *configs.SessionConfig) *SessionStore {
 	store := SessionStore{
-
-		// Store: sessions.NewCookieStore([]byte("oauth-session-secret"))}
-		Store: sessions.NewCookieStore([]byte(cfg.AuthKey))}
-	// []byte(cfg.EncKey),
-	// store.store.Options = &sessions.Options{}
+		Store: sessions.NewCookieStore([]byte(cfg.AuthKey)),
+	}
 	return &store
 }
 
@@ -53,7 +51,6 @@ func (h *SessionStore) GetExistingSession(w http.ResponseWriter, r *http.Request
 	data, ok := oauthSession.Values[SessionKey].([]byte)
 	if !ok {
 		return nil, fmt.Errorf("%s", "No session data found ")
-
 	}
 
 	session := &OAuthSession{}

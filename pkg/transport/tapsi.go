@@ -1,4 +1,4 @@
-package provider
+package transport
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 	"github.com/andybalholm/brotli"
 )
 
@@ -63,24 +63,24 @@ type tapsiResponse struct {
 	Data *tapsiData `json:"data"`
 }
 
-type tapsi struct {
-	_clck        string
-	AccessToken  string
-	RefreshToken string
-	_clsk        string
+type Tapsi struct {
+	clck         string
+	accessToken  string
+	refreshToken string
+	clsk         string
 }
 
-func NewTapsi(s *utils.TapsiConfig) *tapsi {
-	return &tapsi{
-		RefreshToken: s.RefreshToken,
-		AccessToken:  s.AccessToken,
-		_clck:        s.Clck,
-		_clsk:        s.Clsk,
+func NewTapsi(s *configs.TapsiConfig) *Tapsi {
+	return &Tapsi{
+		refreshToken: s.RefreshToken,
+		accessToken:  s.AccessToken,
+		clck:         s.Clck,
+		clsk:         s.Clsk,
 	}
 
 }
 
-func (t *tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLat, strdestinationLong string) int {
+func (t *Tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLat, strdestinationLong string) int {
 
 	//
 	destinationLong, _ := strconv.ParseFloat(strdestinationLong, 64)
@@ -129,22 +129,6 @@ func (t *tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 	}
 	defer resp.Body.Close()
 
-	// var reader io.ReadCloser
-	// switch resp.Header.Get("Content-Encoding") {
-	// case "gzip":
-	// 	reader, err = gzip.NewReader(resp.Body)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	defer reader.Close()
-	// case "deflate":
-	// 	reader = flate.NewReader(resp.Body)
-	// 	defer reader.Close()
-	// // case "br": // brotli
-	// // 	reader = brotli.NewReader(resp.Body)
-	// default:
-	// 	reader = resp.Body
-	// }
 	reader := brotli.NewReader(resp.Body)
 	log.Println(resp.StatusCode)
 
@@ -200,7 +184,7 @@ func (t *tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 	return jsonData.Data.Categories[0].Items[0].Service.Prices[0].PassengerShare
 }
 
-func (t *tapsi) SetHeader(req *http.Request) {
+func (t *Tapsi) SetHeader(req *http.Request) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0")
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
@@ -217,10 +201,10 @@ func (t *tapsi) SetHeader(req *http.Request) {
 	req.Header.Set("TE", "trailers")
 	// req.Header.Set("Accept-Encoding", "br")
 
-	req.Header.Set("Cookie", "_clck="+t._clck+"; "+
-		"accessToken="+t.AccessToken+"; "+
-		"refreshToken="+t.RefreshToken+"; "+
-		"_clsk="+t._clsk)
+	req.Header.Set("Cookie", "_clck="+t.clck+"; "+
+		"accessToken="+t.accessToken+"; "+
+		"refreshToken="+t.refreshToken+"; "+
+		"_clsk="+t.clsk)
 	// for key, values := range req.Header {
 	// 	for _, value := range values {
 	// 		fmt.Printf("%s: %s\n", key, value)

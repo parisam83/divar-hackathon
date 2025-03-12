@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"reflect"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/handlers"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/handlers"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/provider"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/transport"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Postgres driver
 	_ "github.com/golang-migrate/migrate/v4/source/file"       //  'file' source driver
@@ -19,7 +20,7 @@ import (
 
 func main() {
 
-	conf, err := utils.LoadConfig()
+	conf, err := configs.LoadConfig()
 	if err != nil {
 		log.Fatalf("failed to load configurations: %s\n", err)
 	}
@@ -51,10 +52,11 @@ func main() {
 	oauthHandler := handlers.NewOAuthHandler(sessionStore, oauthService)
 	// oauthHandler := handlers.NewOAuthHandler(oauthService)
 
-	snapp := provider.NewSnapp(&conf.Snapp)
+	snapp := transport.NewSnapp(&conf.Snapp)
 	// log.Println(conf.Snapp.ApiKey)
-	tapsi := provider.NewTapsi(&conf.Tapsi)
-	taxiService := services.NewRideService(snapp, tapsi)
+	tapsi := transport.NewTapsi(&conf.Tapsi)
+	neshan := transport.NewNeshan(&conf.Neshan)
+	taxiService := services.NewTransportService(snapp, tapsi, neshan)
 
 	kenarService := services.NewKenarService(conf.Kenar.ApiKey, "https://api.divar.ir/v1/open-platform", query)
 	kenarHandler := handlers.NewKenarHandler(sessionStore, kenarService, taxiService)

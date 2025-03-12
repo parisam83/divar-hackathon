@@ -6,19 +6,19 @@ import (
 	"log"
 	"time"
 
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/oauth2"
 )
 
 type OAuthService struct {
-	appConf   utils.KenarConfig
+	appConf   configs.KenarConfig
 	oauthConf *oauth2.Config
 	queries   *db.Queries
 }
 
-func NewOAuthService(appConfig utils.KenarConfig, queries *db.Queries) *OAuthService {
+func NewOAuthService(appConfig configs.KenarConfig, queries *db.Queries) *OAuthService {
 	conf := &oauth2.Config{
 		ClientID:     appConfig.AppSlug,
 		ClientSecret: appConfig.OauthSecret,

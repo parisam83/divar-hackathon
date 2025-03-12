@@ -5,11 +5,30 @@ import (
 	"log"
 	"net/http"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 
 	"github.com/google/uuid"
 )
+
+type OauthResourceType string
+
+const (
+	POST_ADDON_CREATE  OauthResourceType = "POST_ADDON_CREATE"
+	USER_PHONE         OauthResourceType = "USER_PHONE"
+	OFFLINE_ACCESS     OauthResourceType = "offline_access"
+	DefaultRedirectURL                   = "https://divar.ir/"
+)
+
+type Scope struct {
+	resourceType OauthResourceType
+	resourceID   string
+}
+
+type oAuthHandler struct {
+	oauthService *services.OAuthService
+	store        *utils.SessionStore
+}
 
 func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService) *oAuthHandler {
 
@@ -18,55 +37,6 @@ func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService) *oA
 		oauthService: serv,
 	}
 }
-
-// func (h *oAuthHandler) getExistingSession(w http.ResponseWriter, r *http.Request) (*OAuthSession, error) {
-// 	oauthSession, err := h.store.Get(r, SessionName)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("%s", "Failed to get session: "+err.Error())
-// 	}
-
-// 	data, ok := oauthSession.Values[SessionKey].([]byte)
-// 	if !ok {
-// 		return nil, fmt.Errorf("%s", "No session data found ")
-
-// 	}
-
-// 	session := &OAuthSession{}
-// 	if err := json.Unmarshal(data, session); err != nil {
-// 		return nil, fmt.Errorf("%s", "failed to decode session:"+err.Error())
-// 	}
-// 	return session, nil
-// }
-
-// func (h *oAuthHandler) saveSession(w http.ResponseWriter, r *http.Request, session *OAuthSession) (*OAuthSession, error) {
-// 	oauthSession, err := h.store.Get(r, SessionName)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to get session: %w", err)
-// 	}
-
-// 	sessionJson, err := json.Marshal(session)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("%s", "Failed to marshal session: "+err.Error())
-// 	}
-
-// 	oauthSession.Values[SessionKey] = sessionJson
-// 	err = h.store.Save(r, w, oauthSession)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("%s", "Failed to save session: "+err.Error())
-// 	}
-// 	log.Printf("Session saved successfully with state: %s", session.State)
-// 	return session, nil
-
-// }
-
-// func (h *oAuthHandler) createNewSession(w http.ResponseWriter, r *http.Request, postToken string) (*OAuthSession, error) {
-// 	state := uuid.New().String()
-// 	session := &OAuthSession{
-// 		PostToken: postToken,
-// 		State:     state,
-// 	}
-// 	return h.saveSession(w, r, session)
-// }
 
 func (h *oAuthHandler) buildScopes(postToken string) []string {
 	oauthScopes := []Scope{

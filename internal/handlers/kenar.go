@@ -7,22 +7,21 @@ import (
 	"net/http"
 	"strconv"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/services"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 )
 
 type KenarHandler struct {
-	store        *utils.SessionStore
-	kenarService *services.KenarService
-	taxiService  *services.RideService
+	store            *utils.SessionStore
+	kenarService     *services.KenarService
+	transportService *services.TransportService
 }
 
-func NewKenarHandler(store *utils.SessionStore, serv *services.KenarService, taxiService *services.RideService) *KenarHandler {
+func NewKenarHandler(store *utils.SessionStore, serv *services.KenarService, transportService *services.TransportService) *KenarHandler {
 	return &KenarHandler{
-		store:        store,
-		kenarService: serv,
-		taxiService:  taxiService,
+		store:            store,
+		kenarService:     serv,
+		transportService: transportService,
 	}
 }
 
@@ -52,14 +51,15 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Couldn't fetch the coordinates "+err.Error(), http.StatusNotFound)
 	}
 	// log.Println(coordinates.Latitude)
-	stationResult, err := pkg.GetSubwayStationHandler(coordinates.Latitude, coordinates.Longitude)
+
+	stationResult, err := k.transportService.FindNearestStation(coordinates.Latitude, coordinates.Longitude)
 
 	// result, err := pkg.GetSubwayStationHandler("35.705080137369734", "51.3493")
 	fmt.Println(stationResult)
 	dest_lat := strconv.FormatFloat(stationResult.StationLat, 'f', -1, 64)
 	dest_long := strconv.FormatFloat(stationResult.StationLong, 'f', -1, 64)
 	// res, err := k.taxiService.GetPrice(coordinates.Latitude, coordinates.Longitude, dest_lat, dest_long)
-	prices, err := k.taxiService.GetPrice(coordinates.Latitude, coordinates.Longitude, dest_lat, dest_long)
+	prices, err := k.transportService.GetPrice(coordinates.Latitude, coordinates.Longitude, dest_lat, dest_long)
 	if err != nil {
 		http.Error(w, "Could no fetch prices to the station", http.StatusNotFound)
 	}

@@ -1,4 +1,4 @@
-package utils
+package configs
 
 import (
 	"fmt"
@@ -53,17 +53,6 @@ type SessionConfig struct {
 	// EncKey  string `mapstructure:"SessionEncKey"`
 }
 
-//	type SnappConfig struct {
-//		ApiKey         string
-//		_clck          string
-//		_clsk          string
-//		_ga            string
-//		_ga_Y4QV007ERR string
-//		_ym_d          string
-//		_ym_isad       string
-//		_ym_uid        string
-//		cookiesession1 string
-//	}
 type SnappConfig struct {
 	ApiKey        string `mapstructure:"access_token"`
 	Clck          string `mapstructure:"clck"`
@@ -91,15 +80,14 @@ func (cfg *KenarConfig) Validate() error {
 }
 
 func LoadConfig() (*Config, error) {
-
-	err := godotenv.Load("/home/divar/Realestate-POI/utils/.env")
+	err := godotenv.Load("./pkg/configs/.env")
 	if err != nil {
 		log.Fatal("Error loading .env file" + err.Error())
 	}
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("../Realestate-POI/configs")
+	viper.AddConfigPath("./pkg/configs")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 

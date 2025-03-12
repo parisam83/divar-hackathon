@@ -1,4 +1,4 @@
-package pkg
+package transport
 
 import (
 	"encoding/json"
@@ -6,6 +6,8 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 )
 
 const (
@@ -69,7 +71,18 @@ type StationResponse struct {
 	TotalDistance  string  `json:"totalDistance"`
 }
 
-func GetSearchResult(startLat, startLong float64) ([]Items, error) {
+type Neshan struct {
+	apiKey string
+}
+
+func NewNeshan(s *configs.NeshanConfig) *Neshan {
+	return &Neshan{
+		apiKey: s.NeshanApiKey,
+	}
+
+}
+
+func (n *Neshan) GetSearchResult(startLat, startLong float64) ([]Items, error) {
 	searchURL := fmt.Sprintf(searchApi, "%D9%85%D8%AA%D8%B1%D9%88", startLat, startLong)
 	req, err := http.NewRequest("GET", searchURL, nil)
 	if err != nil {
@@ -112,14 +125,14 @@ func GetSearchResult(startLat, startLong float64) ([]Items, error) {
 	return nearbyStations, nil
 }
 
-func GetDirectionResult(origin, destination string) (DirectionResult, error) {
+func (n *Neshan) GetDirectionResult(origin, destination string) (DirectionResult, error) {
 	directionUrl := fmt.Sprintf(directionApi, origin, destination)
 	req, err := http.NewRequest("GET", directionUrl, nil)
 	if err != nil {
 		return DirectionResult{}, err
 	}
 
-	req.Header.Set("Api-Key", "service.fee4f03fa6964054bd5d009dd4134ffd")
+	req.Header.Set("Api-Key", n.apiKey)
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
@@ -140,18 +153,30 @@ func GetDirectionResult(origin, destination string) (DirectionResult, error) {
 	return directionResult, nil
 }
 
-func GetSubwayStation(startLatStr, startLongStr string) (*StationResponse, error) {
-	startLat, err := strconv.ParseFloat(startLatStr, 64)
+func distance(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6371 // Radius of the Earth in km
+	dLat := (lat2 - lat1) * (math.Pi / 180)
+	dLon := (lon2 - lon1) * (math.Pi / 180)
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(lat1*(math.Pi/180))*math.Cos(lat2*(math.Pi/180))*math.Sin(dLon/2)*math.Sin(dLon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return R * c
+}
+
+func (n *Neshan) GetSubwayStation(startLatstr, startLongstr string) (*StationResponse, error) {
+	if startLatstr == "" || startLongstr == "" {
+		return nil, fmt.Errorf("startLat and startLong are required")
+	}
+	startLat, err := strconv.ParseFloat(startLatstr, 64)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid startLat parameter")
+		return nil, fmt.Errorf("invalid startLat parameter")
 	}
 
-	startLong, err := strconv.ParseFloat(startLongStr, 64)
+	startLong, err := strconv.ParseFloat(startLongstr, 64)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid startLong parameter")
+		return nil, fmt.Errorf("invalid startLong parameter")
 	}
 
-	nearbyStations, err := GetSearchResult(startLat, startLong)
+	nearbyStations, err := n.GetSearchResult(startLat, startLong)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +187,7 @@ func GetSubwayStation(startLatStr, startLongStr string) (*StationResponse, error
 	origin := fmt.Sprintf("%f", startLat) + "," + fmt.Sprintf("%f", startLong)
 	destination := fmt.Sprintf("%f", closest.Location.Y) + "," + fmt.Sprintf("%f", closest.Location.X)
 
-	directionResult, err := GetDirectionResult(origin, destination)
+	directionResult, err := n.GetDirectionResult(origin, destination)
 	if err != nil {
 		return nil, err
 	}
@@ -177,29 +202,5 @@ func GetSubwayStation(startLatStr, startLongStr string) (*StationResponse, error
 		TotalDuration:  totalDuration,
 		TotalDistance:  totalDistance,
 	}
-
 	return response, nil
-}
-
-func distance(lat1, lon1, lat2, lon2 float64) float64 {
-	const R = 6371 // Radius of the Earth in km
-	dLat := (lat2 - lat1) * (math.Pi / 180)
-	dLon := (lon2 - lon1) * (math.Pi / 180)
-	a := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(lat1*(math.Pi/180))*math.Cos(lat2*(math.Pi/180))*math.Sin(dLon/2)*math.Sin(dLon/2)
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-	return R * c
-}
-
-func GetSubwayStationHandler(startLat, startLong string) (*StationResponse, error) {
-	// startLat := r.URL.Query().Get("startLat")
-	// startLong := r.URL.Query().Get("startLong")
-	if startLat == "" || startLong == "" {
-		return nil, fmt.Errorf("startLat and startLong are required")
-	}
-
-	result, err := GetSubwayStation(startLat, startLong)
-	if err != nil {
-		return nil, fmt.Errorf(err.Error())
-	}
-	return result, nil
 }

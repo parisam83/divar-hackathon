@@ -1,4 +1,4 @@
-package provider
+package transport
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 )
 
 type snappPoint struct {
@@ -36,34 +36,34 @@ type snappResponse struct {
 	Data *snappData `json:"data"`
 }
 
-type snapp struct {
-	AccessToken    string
+type Snapp struct {
+	accessToken    string
 	cookiesession1 string
-	_clck          string
-	_ga_Y4QV007ERR string
-	_ga            string
-	_ym_d          string
-	_ym_uid        string
-	_ym_isad       string
-	_clsk          string
+	clck           string
+	ga_Y4QV007ERR  string
+	ga             string
+	ym_d           string
+	ym_uid         string
+	ym_isad        string
+	clsk           string
 }
 
-func NewSnapp(s *utils.SnappConfig) *snapp {
-	return &snapp{
-		AccessToken:    s.ApiKey,
+func NewSnapp(s *configs.SnappConfig) *Snapp {
+	return &Snapp{
+		accessToken:    s.ApiKey,
 		cookiesession1: s.CookieSession,
-		_clck:          s.Clck,
-		_clsk:          s.Clsk,
-		_ym_d:          s.YandexDate,
-		_ym_uid:        s.YandexUID,
-		_ym_isad:       s.YandexAd,
-		_ga_Y4QV007ERR: s.GATracking,
-		_ga:            s.GA,
+		clck:           s.Clck,
+		clsk:           s.Clsk,
+		ym_d:           s.YandexDate,
+		ym_uid:         s.YandexUID,
+		ym_isad:        s.YandexAd,
+		ga_Y4QV007ERR:  s.GATracking,
+		ga:             s.GA,
 	}
 
 }
 
-func (s *snapp) GetPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int {
+func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int {
 	fmt.Println("dibididbididbi in snapp.go")
 	data := snappRequest{
 		Points: []*snappPoint{
@@ -127,7 +127,7 @@ func (s *snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 	return jsonData.Data.Prices[0].Final / 10
 }
 
-func (s *snapp) SetHeader(req *http.Request) {
+func (s *Snapp) SetHeader(req *http.Request) {
 	// err := godotenv.Load()
 	// if err != nil {
 	// 	log.Fatal(err)
@@ -136,11 +136,11 @@ func (s *snapp) SetHeader(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Referer", "https://app.snapp.taxi/pre-ride?utm_source=landing&utm_medium=request-button&utm_campaign=taxi&_gl=1*6bvi14*_gcl_au*MTEzNjQxNTUwMy4xNzQwNTc4NzI0")
 	req.Header.Set("Origin", "https://app.snapp.taxi")
-	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+s.accessToken)
 	req.Header.Set("Cookie", "cookiesession1="+s.cookiesession1+
-		"_clck="+s._clck+"_ga_Y4QV007ERR="+s._ga_Y4QV007ERR+"_ga="+s._ga+
-		"_ym_uid="+s._ym_uid+"_ym_d="+s._ym_d+"_ym_isad="+s._ym_isad+
-		"_clsk="+s._clsk)
+		"_clck="+s.clck+"_ga_Y4QV007ERR="+s.ga_Y4QV007ERR+"_ga="+s.ga+
+		"_ym_uid="+s.ym_uid+"_ym_d="+s.ym_d+"_ym_isad="+s.ym_isad+
+		"_clsk="+s.clsk)
 	// Print all headers
 	// for key, values := range req.Header {
 	// 	for _, value := range values {
