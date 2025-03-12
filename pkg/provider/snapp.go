@@ -3,11 +3,12 @@ package provider
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 
-	"github.com/joho/godotenv"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 )
 
 type snappPoint struct {
@@ -47,7 +48,23 @@ type snapp struct {
 	_clsk          string
 }
 
+func NewSnapp(s *utils.SnappConfig) *snapp {
+	return &snapp{
+		AccessToken:    s.ApiKey,
+		cookiesession1: s.CookieSession,
+		_clck:          s.Clck,
+		_clsk:          s.Clsk,
+		_ym_d:          s.YandexDate,
+		_ym_uid:        s.YandexUID,
+		_ym_isad:       s.YandexAd,
+		_ga_Y4QV007ERR: s.GATracking,
+		_ga:            s.GA,
+	}
+
+}
+
 func (s *snapp) GetPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int {
+	fmt.Println("dibididbididbi in snapp.go")
 	data := snappRequest{
 		Points: []*snappPoint{
 			{Lat: originLat, Lng: originLong},
@@ -64,13 +81,14 @@ func (s *snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("85 in snapp.go")
 	body := bytes.NewReader(dataBytes)
 	req, err := http.NewRequest("POST", "https://app.snapp.taxi/api/api-base/v2/passenger/newprice/s/6/0", body)
 	if err != nil {
 		log.Fatal(err)
 	}
 	s.SetHeader(req)
-
+	log.Println("92 in snapp.go")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -82,12 +100,13 @@ func (s *snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	log.Println("104 in snapp.go")
 	var jsonData snappResponse
 	err = json.Unmarshal(bodyText, &jsonData)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println(resp.StatusCode)
 
 	if resp.StatusCode != 200 {
 		log.Fatal("Status code is not 200")
@@ -109,10 +128,10 @@ func (s *snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 }
 
 func (s *snapp) SetHeader(req *http.Request) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Referer", "https://app.snapp.taxi/pre-ride?utm_source=landing&utm_medium=request-button&utm_campaign=taxi&_gl=1*6bvi14*_gcl_au*MTEzNjQxNTUwMy4xNzQwNTc4NzI0")
@@ -122,4 +141,11 @@ func (s *snapp) SetHeader(req *http.Request) {
 		"_clck="+s._clck+"_ga_Y4QV007ERR="+s._ga_Y4QV007ERR+"_ga="+s._ga+
 		"_ym_uid="+s._ym_uid+"_ym_d="+s._ym_d+"_ym_isad="+s._ym_isad+
 		"_clsk="+s._clsk)
+	// Print all headers
+	// for key, values := range req.Header {
+	// 	for _, value := range values {
+	// 		fmt.Printf("%s: %s\n", key, value)
+	// 	}
+	// }
+
 }

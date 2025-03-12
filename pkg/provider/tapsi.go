@@ -3,12 +3,14 @@ package provider
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/joho/godotenv"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
+	"github.com/andybalholm/brotli"
 )
 
 type origin struct {
@@ -68,6 +70,16 @@ type tapsi struct {
 	_clsk        string
 }
 
+func NewTapsi(s *utils.TapsiConfig) *tapsi {
+	return &tapsi{
+		RefreshToken: s.RefreshToken,
+		AccessToken:  s.AccessToken,
+		_clck:        s.Clck,
+		_clsk:        s.Clsk,
+	}
+
+}
+
 func (t *tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLat, strdestinationLong string) int {
 
 	//
@@ -108,6 +120,7 @@ func (t *tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 		log.Fatal(err)
 	}
 	t.SetHeader(req)
+	log.Println("121 in tapsi.go")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -116,17 +129,46 @@ func (t *tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 	}
 	defer resp.Body.Close()
 
-	bodyText, err := io.ReadAll(resp.Body)
+	// var reader io.ReadCloser
+	// switch resp.Header.Get("Content-Encoding") {
+	// case "gzip":
+	// 	reader, err = gzip.NewReader(resp.Body)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	defer reader.Close()
+	// case "deflate":
+	// 	reader = flate.NewReader(resp.Body)
+	// 	defer reader.Close()
+	// // case "br": // brotli
+	// // 	reader = brotli.NewReader(resp.Body)
+	// default:
+	// 	reader = resp.Body
+	// }
+	reader := brotli.NewReader(resp.Body)
+	log.Println(resp.StatusCode)
+
+	// Read the decompressed data
+	bodyText, err := io.ReadAll(reader)
 	if err != nil {
+		log.Println(bodyText)
 		log.Fatal(err)
 	}
-
+	log.Println("128 in tapsi.go")
+	// bodyText, err := io.ReadAll(resp.Body)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	log.Println("134 in tapsi.go")
+	// fmt.Println(bodyText)
+	fmt.Println("Raw response:", string(bodyText))
 	var jsonData tapsiResponse
 	err = json.Unmarshal(bodyText, &jsonData)
 	if err != nil {
+		fmt.Println("test")
 		log.Fatal(err)
 	}
-
+	log.Println("140 in tapsi.go")
 	if resp.StatusCode != 200 {
 		log.Fatal("Status code is not 200")
 	}
@@ -159,16 +201,29 @@ func (t *tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 }
 
 func (t *tapsi) SetHeader(req *http.Request) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br, zstd")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Referer", "https://app.tapsi.cab/")
-	req.Header.Set("x-agent", "v2.2|passenger|WEBAPP|7.13.4||5.0")
+	req.Header.Set("x-agent", "v2.2|passenger|WEBAPP|7.14.7||5.0")
 	req.Header.Set("Origin", "https://app.tapsi.cab/")
-	req.Header.Set("Cookie", "_clck="+t._clck+
-		"accessToken="+t.AccessToken+
-		"refreshToken="+t.RefreshToken+
-		"_clsk="+t._clck)
+	req.Header.Set("Sec-Fetch-Dest", "empty")
+	req.Header.Set("Sec-Fetch-Mode", "cors")
+	req.Header.Set("Sec-Fetch-Site", "same-site")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Priority", "u=4")
+	req.Header.Set("TE", "trailers")
+	// req.Header.Set("Accept-Encoding", "br")
+
+	req.Header.Set("Cookie", "_clck="+t._clck+"; "+
+		"accessToken="+t.AccessToken+"; "+
+		"refreshToken="+t.RefreshToken+"; "+
+		"_clsk="+t._clsk)
+	// for key, values := range req.Header {
+	// 	for _, value := range values {
+	// 		fmt.Printf("%s: %s\n", key, value)
+	// 	}
+	// }
 }

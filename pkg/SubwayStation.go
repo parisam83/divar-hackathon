@@ -3,7 +3,6 @@ package pkg
 import (
 	"encoding/json"
 	"fmt"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/config"
 	"math"
 	"net/http"
 	"strconv"
@@ -62,6 +61,13 @@ type SearchLocation struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
 }
+type StationResponse struct {
+	ClosestStation string  `json:"closest"`
+	StationLat     float64 `json:"stationLat"`
+	StationLong    float64 `json:"stationLong"`
+	TotalDuration  string  `json:"totalDuration"`
+	TotalDistance  string  `json:"totalDistance"`
+}
 
 func GetSearchResult(startLat, startLong float64) ([]Items, error) {
 	searchURL := fmt.Sprintf(searchApi, "%D9%85%D8%AA%D8%B1%D9%88", startLat, startLong)
@@ -70,7 +76,7 @@ func GetSearchResult(startLat, startLong float64) ([]Items, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Api-Key", config.ConfigVar.NeshanApiKey)
+	req.Header.Set("Api-Key", "service.fee4f03fa6964054bd5d009dd4134ffd")
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
@@ -113,7 +119,7 @@ func GetDirectionResult(origin, destination string) (DirectionResult, error) {
 		return DirectionResult{}, err
 	}
 
-	req.Header.Set("Api-Key", config.ConfigVar.NeshanApiKey)
+	req.Header.Set("Api-Key", "service.fee4f03fa6964054bd5d009dd4134ffd")
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
@@ -134,7 +140,7 @@ func GetDirectionResult(origin, destination string) (DirectionResult, error) {
 	return directionResult, nil
 }
 
-func GetSubwayStation(startLatStr, startLongStr string) (interface{}, error) {
+func GetSubwayStation(startLatStr, startLongStr string) (*StationResponse, error) {
 	startLat, err := strconv.ParseFloat(startLatStr, 64)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid startLat parameter")
@@ -164,13 +170,7 @@ func GetSubwayStation(startLatStr, startLongStr string) (interface{}, error) {
 	totalDuration := directionResult.Route[0].Legs[0].Duration.Text
 	totalDistance := directionResult.Route[0].Legs[0].Distance.Text
 
-	response := struct {
-		ClosestStation string  `json:"closest"`
-		StationLat     float64 `json:"stationLat"`
-		StationLong    float64 `json:"stationLong"`
-		TotalDuration  string  `json:"totalDuration"`
-		TotalDistance  string  `json:"totalDistance"`
-	}{
+	response := &StationResponse{
 		ClosestStation: closest.Title,
 		StationLat:     stationLat,
 		StationLong:    stationLong,
@@ -190,16 +190,16 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 	return R * c
 }
 
-func GetSubwayStationHandler(w http.ResponseWriter, r *http.Request) {
-	startLat := r.URL.Query().Get("startLat")
-	startLong := r.URL.Query().Get("startLong")
+func GetSubwayStationHandler(startLat, startLong string) (*StationResponse, error) {
+	// startLat := r.URL.Query().Get("startLat")
+	// startLong := r.URL.Query().Get("startLong")
+	if startLat == "" || startLong == "" {
+		return nil, fmt.Errorf("startLat and startLong are required")
+	}
 
 	result, err := GetSubwayStation(startLat, startLong)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, fmt.Errorf(err.Error())
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	return result, nil
 }
