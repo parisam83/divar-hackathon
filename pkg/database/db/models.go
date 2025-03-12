@@ -3,3 +3,18 @@
 //   sqlc v1.28.0
 
 package db
+
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type Oauth struct {
+	ID           int32              `db:"id" json:"id"`
+	SessionID    string             `db:"session_id" json:"session_id"`
+	AccessToken  string             `db:"access_token" json:"access_token"`
+	RefreshToken string             `db:"refresh_token" json:"refresh_token"`
+	ExpiresIn    pgtype.Timestamp   `db:"expires_in" json:"expires_in"`
+	PostToken    string             `db:"post_token" json:"post_token"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}

@@ -34,3 +34,23 @@ func (q *Queries) AddOAuthData(ctx context.Context, arg AddOAuthDataParams) erro
 	)
 	return err
 }
+
+const getOAuthBySessionId = `-- name: GetOAuthBySessionId :one
+SELECT id, session_id, access_token, refresh_token, expires_in, post_token, created_at, updated_at FROM oauth WHERE session_id = $1
+`
+
+func (q *Queries) GetOAuthBySessionId(ctx context.Context, sessionID string) (Oauth, error) {
+	row := q.db.QueryRow(ctx, getOAuthBySessionId, sessionID)
+	var i Oauth
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.ExpiresIn,
+		&i.PostToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

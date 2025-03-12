@@ -13,6 +13,7 @@ type Querier interface {
 	AddPOIResult(ctx context.Context, arg AddPOIResultParams) error
 	AddPlace(ctx context.Context, arg AddPlaceParams) error
 	AddPost(ctx context.Context, arg AddPostParams) error
+	GetOAuthBySessionId(ctx context.Context, sessionID string) (Oauth, error)
 }
 
 var _ Querier = (*Queries)(nil)
