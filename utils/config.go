@@ -15,7 +15,15 @@ type Config struct {
 	Kenar    KenarConfig
 	Session  SessionConfig
 	Server   ServerConfig
+	Neshan   NeshanConfig
+	Snapp    SnappConfig
+	Tapsi    TapsiConfig
 }
+
+type NeshanConfig struct {
+	NeshanApiKey string `mapstructure:"NeshanApiKey"`
+}
+
 type KenarConfig struct {
 	AppSlug     string `mapstructure:"KenarAppSlug"`
 	ApiKey      string `mapstructure:"KenarApiKey"`
@@ -25,6 +33,7 @@ type KenarConfig struct {
 type ServerConfig struct {
 	Port string `mapstructure:"Port"`
 }
+
 type DatabaseConfig struct {
 	Host                         string
 	Port                         int
@@ -38,9 +47,39 @@ type DatabaseConfig struct {
 	MaxConnLifetimeMinutes       int
 	MaxConnIdleTimeMinutes       int
 }
+
 type SessionConfig struct {
 	AuthKey string `mapstructure:"SessionAuthKey"`
 	// EncKey  string `mapstructure:"SessionEncKey"`
+}
+
+//	type SnappConfig struct {
+//		ApiKey         string
+//		_clck          string
+//		_clsk          string
+//		_ga            string
+//		_ga_Y4QV007ERR string
+//		_ym_d          string
+//		_ym_isad       string
+//		_ym_uid        string
+//		cookiesession1 string
+//	}
+type SnappConfig struct {
+	ApiKey        string `mapstructure:"access_token"`
+	Clck          string `mapstructure:"clck"`
+	Clsk          string `mapstructure:"clsk"`
+	GA            string `mapstructure:"ga"`
+	GATracking    string `mapstructure:"ga_tracking"`
+	YandexDate    string `mapstructure:"ym_d"`
+	YandexAd      string `mapstructure:"ym_isad"`
+	YandexUID     string `mapstructure:"ym_uid"`
+	CookieSession string `mapstructure:"cookie_session"`
+}
+type TapsiConfig struct {
+	Clck         string `mapstructure:"clck"`
+	Clsk         string `mapstructure:"clsk"`
+	AccessToken  string `mapstructure:"access_token"`
+	RefreshToken string `mapstructure:"refresh_token"`
 }
 
 func (cfg *KenarConfig) Validate() error {

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,54 +19,54 @@ func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService) *oA
 	}
 }
 
-func (h *oAuthHandler) getExistingSession(w http.ResponseWriter, r *http.Request) (*OAuthSession, error) {
-	oauthSession, err := h.store.Get(r, SessionName)
-	if err != nil {
-		return nil, fmt.Errorf("%s", "Failed to get session: "+err.Error())
-	}
+// func (h *oAuthHandler) getExistingSession(w http.ResponseWriter, r *http.Request) (*OAuthSession, error) {
+// 	oauthSession, err := h.store.Get(r, SessionName)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("%s", "Failed to get session: "+err.Error())
+// 	}
 
-	data, ok := oauthSession.Values[SessionKey].([]byte)
-	if !ok {
-		return nil, fmt.Errorf("%s", "No session data found ")
+// 	data, ok := oauthSession.Values[SessionKey].([]byte)
+// 	if !ok {
+// 		return nil, fmt.Errorf("%s", "No session data found ")
 
-	}
+// 	}
 
-	session := &OAuthSession{}
-	if err := json.Unmarshal(data, session); err != nil {
-		return nil, fmt.Errorf("%s", "failed to decode session:"+err.Error())
-	}
-	return session, nil
-}
+// 	session := &OAuthSession{}
+// 	if err := json.Unmarshal(data, session); err != nil {
+// 		return nil, fmt.Errorf("%s", "failed to decode session:"+err.Error())
+// 	}
+// 	return session, nil
+// }
 
-func (h *oAuthHandler) saveSession(w http.ResponseWriter, r *http.Request, session *OAuthSession) (*OAuthSession, error) {
-	oauthSession, err := h.store.Get(r, SessionName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get session: %w", err)
-	}
+// func (h *oAuthHandler) saveSession(w http.ResponseWriter, r *http.Request, session *OAuthSession) (*OAuthSession, error) {
+// 	oauthSession, err := h.store.Get(r, SessionName)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get session: %w", err)
+// 	}
 
-	sessionJson, err := json.Marshal(session)
-	if err != nil {
-		return nil, fmt.Errorf("%s", "Failed to marshal session: "+err.Error())
-	}
+// 	sessionJson, err := json.Marshal(session)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("%s", "Failed to marshal session: "+err.Error())
+// 	}
 
-	oauthSession.Values[SessionKey] = sessionJson
-	err = h.store.Save(r, w, oauthSession)
-	if err != nil {
-		return nil, fmt.Errorf("%s", "Failed to save session: "+err.Error())
-	}
-	log.Printf("Session saved successfully with state: %s", session.State)
-	return session, nil
+// 	oauthSession.Values[SessionKey] = sessionJson
+// 	err = h.store.Save(r, w, oauthSession)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("%s", "Failed to save session: "+err.Error())
+// 	}
+// 	log.Printf("Session saved successfully with state: %s", session.State)
+// 	return session, nil
 
-}
+// }
 
-func (h *oAuthHandler) createNewSession(w http.ResponseWriter, r *http.Request, postToken string) (*OAuthSession, error) {
-	state := uuid.New().String()
-	session := &OAuthSession{
-		PostToken: postToken,
-		State:     state,
-	}
-	return h.saveSession(w, r, session)
-}
+// func (h *oAuthHandler) createNewSession(w http.ResponseWriter, r *http.Request, postToken string) (*OAuthSession, error) {
+// 	state := uuid.New().String()
+// 	session := &OAuthSession{
+// 		PostToken: postToken,
+// 		State:     state,
+// 	}
+// 	return h.saveSession(w, r, session)
+// }
 
 func (h *oAuthHandler) buildScopes(postToken string) []string {
 	oauthScopes := []Scope{
@@ -99,16 +98,17 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check existing session
-	session, err := h.getExistingSession(w, r)
+	session, err := h.store.GetExistingSession(w, r)
 	if err == nil && session != nil {
 		log.Println(session.SessionKey)
 		log.Println(session.PostToken)
 		log.Println("User has entered before?!")
-		//redirect
+		url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
+		http.Redirect(w, r, url, http.StatusSeeOther)
+		return
 	}
-
 	//create new session
-	session, err = h.createNewSession(w, r, postToken)
+	session, err = h.store.CreateNewSession(w, r, postToken)
 	if err != nil {
 		http.Error(w, "Failed to create session: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -144,7 +144,7 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//get existing session
-	session, err := h.getExistingSession(w, r)
+	session, err := h.store.GetExistingSession(w, r)
 	if err != nil {
 		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -161,7 +161,6 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// expires_in := time.Unix(token.Expiry.Unix(), 0)
 
 	//update session
 	// deleting state from session because we dont need it after oauth
@@ -170,7 +169,7 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	session.SessionKey = uuid.New().String()
 
 	//save the new session
-	h.saveSession(w, r, session)
+	h.store.SaveSession(w, r, session)
 
 	// Save token in database
 	if err := h.oauthService.InsertOAuthData(
@@ -181,11 +180,11 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		// time.Unix(token.Expiry.Unix(), 0),
 		token.Expiry,
 	); err != nil {
-		http.Error(w, "Failed to save token in database", http.StatusInternalServerError)
+		http.Error(w, "Failed to save token in database"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
-	// http.Redirect(w, r, url, http.StatusSeeOther)
+	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
+	http.Redirect(w, r, url, http.StatusSeeOther)
 
 }

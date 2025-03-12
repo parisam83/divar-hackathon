@@ -1,11 +1,13 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-resty/resty/v2"
@@ -23,9 +25,7 @@ type KenarService struct {
 func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
 	return &KenarService{
 		apiKey:  apiKey,
-		client:  resty.New()
-				.SetHeader("Content-Type", "application/json")
-				.SetHeader("X-Api-Key",apiKey)
+		client:  resty.New().SetHeader("Content-Type", "application/json").SetHeader("X-Api-Key", apiKey),
 		domain:  domain, //https://api.divar.ir/v1/open-platform
 		queries: queries,
 	}
@@ -39,6 +39,11 @@ func (k *KenarService) doRequest(method, endpoint string, payload io.Reader) (*h
 		return nil, err
 	}
 	return req, nil
+
+}
+
+func (k *KenarService) GetOAuthBySessionId(sessionId string) (db.Oauth, error) {
+	return k.queries.GetOAuthBySessionId(context.Background(), sessionId)
 
 }
 
@@ -95,57 +100,67 @@ func (s *KenarService) PostWidgets(postToken string) {
 	req.Header.Set("x-access-token", "ory_at_oGndTdJE-Cfq8-fuAAmFuHI_itqopsk7Pr8zQiBkPEQ.2FxEb-7SlGNzhF5tnduTXgfUxqoFeOnNlEzwHnEbunw")
 	log.Println("=======================================")
 	fmt.Println(s.client)
-	res, err := s.client.Do(req)
-	log.Println(res.Status)
-	log.Println(err)
-	log.Println("=======================================")
-	if err != nil {
-		log.Println("request failed: %w", err)
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		log.Println("failed to read response body: %w", err)
-	}
-	var j map[string]interface{}
-	err = json.Unmarshal(body, &j)
-	log.Println(j)
-	if err != nil {
-		log.Println("Error parsing response:", err)
-		return
-	}
-
-}
-
-func (k *KenarService) GetCoordinates(postToken string) {
-	k.PostWidgets(postToken)
-
-	// req, err := k.doRequest(http.MethodGet, "/finder/post/"+postToken, nil)
+	// res, err := s.cl
+	// log.Println(res.Status)
+	// log.Println(err)
+	// log.Println("=======================================")
 	// if err != nil {
-	// 	log.Println("Error creating request:", err)
-	// 	return
+	// 	log.Println("request failed: %w", err)
 	// }
-	// resp, err := k.client.Do(req)
+	// defer res.Body.Close()
+	// body, err := io.ReadAll(res.Body)
 	// if err != nil {
-	// 	log.Println("Error sending request" + err.Error())
-	// 	return
+	// 	log.Println("failed to read response body: %w", err)
 	// }
-	// defer resp.Body.Close()
-	// log.Println("Response.staus code:", resp.StatusCode)
-	// if resp.StatusCode != http.StatusOK {
-	// 	log.Println("Error response code:", resp.StatusCode)
-	// 	return
-	// // }
-	// body, _ := io.ReadAll(resp.Body)
-	// var jsonData map[string]interface{}
-	// err = json.Unmarshal(body, &jsonData)
+	// var j map[string]interface{}
+	// err = json.Unmarshal(body, &j)
+	// log.Println(j)
 	// if err != nil {
 	// 	log.Println("Error parsing response:", err)
 	// 	return
 	// }
 
-	// fmt.Println(jsonData["data"].(map[string]interface{})["latitude"])
-	// fmt.Println(jsonData["data"].(map[string]interface{})["longitude"])
+}
 
-	log.Println("Request successful")
+type coordinate struct {
+	Latitude  string
+	Longitude string
+}
+
+func (k *KenarService) GetCoordinates(postToken string) (*coordinate, error) {
+	// k.PostWidgets(postToken)
+
+	resp, err := k.client.R().Get(GetPostUrl + postToken)
+
+	// req, err := k.doRequest(http.MethodGet, "/finder/post/"+postToken, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error sending request %w", err)
+	}
+
+	var jsonData map[string]interface{}
+	err = json.Unmarshal(resp.Body(), &jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response: " + err.Error())
+	}
+	data, ok := jsonData["data"].(map[string]interface{})
+	log.Println(data)
+	if !ok {
+		return nil, fmt.Errorf("invalid response format: 'data' field not found or invalid")
+	}
+
+	lat, ok := data["latitude"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("latitude not found or invalid type")
+	}
+
+	long, ok := data["longitude"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("longitude not found or invalid type")
+	}
+
+	coords := &coordinate{
+		Latitude:  strconv.FormatFloat(lat, 'f', -1, 64),
+		Longitude: strconv.FormatFloat(long, 'f', -1, 64),
+	}
+	return coords, nil
 }

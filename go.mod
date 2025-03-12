@@ -43,7 +43,9 @@ require (
 )
 
 require (
+	github.com/andybalholm/brotli v1.1.1
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/golang-migrate/migrate/v4 v4.18.2
+	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/sessions v1.4.0
 )

@@ -13,12 +13,12 @@ import (
 )
 
 type OAuthService struct {
-	appConf   utils.AppConfig
+	appConf   utils.KenarConfig
 	oauthConf *oauth2.Config
 	queries   *db.Queries
 }
 
-func NewOAuthService(appConfig utils.AppConfig, queries *db.Queries) *OAuthService {
+func NewOAuthService(appConfig utils.KenarConfig, queries *db.Queries) *OAuthService {
 	conf := &oauth2.Config{
 		ClientID:     appConfig.AppSlug,
 		ClientSecret: appConfig.OauthSecret,
@@ -33,9 +33,6 @@ func NewOAuthService(appConfig utils.AppConfig, queries *db.Queries) *OAuthServi
 		oauthConf: conf,
 		queries:   queries,
 	}
-}
-func (s *OAuthService) GetSessionKey() string {
-	return s.appConf.SessionKey
 }
 
 func (s *OAuthService) InsertOAuthData(sessionId, accessToken, refreshToken, postToken string, expiresIn time.Time) error {

@@ -1,6 +1,9 @@
 package services
 
 import (
+	"fmt"
+	"log"
+
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/provider"
 )
 
@@ -19,7 +22,10 @@ func NewRideService(snapp, tapsi provider.RideProvider) *RideService {
 func (rs *RideService) GetPrice(originLat, originLong, destinationLat, destinationLong string) (
 	map[string]int, error) {
 	prices := make(map[string]int)
+	fmt.Println("doooooooooooooooooooooooo in ride.go")
 	prices["snapp"] = rs.snapp.GetPriceEstimation(originLat, originLong, destinationLat, destinationLong)
+	log.Println(prices["snapp"])
 	prices["tapsi"] = rs.tapsi.GetPriceEstimation(originLat, originLong, destinationLat, destinationLong)
+	log.Println(prices["tapsi"])
 	return prices, nil
 }
