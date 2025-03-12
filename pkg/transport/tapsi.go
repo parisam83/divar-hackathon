@@ -120,7 +120,7 @@ func (t *Tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 		log.Fatal(err)
 	}
 	t.SetHeader(req)
-	log.Println("121 in tapsi.go")
+	// log.Println("121 in tapsi.go")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -130,7 +130,7 @@ func (t *Tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 	defer resp.Body.Close()
 
 	reader := brotli.NewReader(resp.Body)
-	log.Println(resp.StatusCode)
+	// log.Println(resp.StatusCode)
 
 	// Read the decompressed data
 	bodyText, err := io.ReadAll(reader)
@@ -138,21 +138,17 @@ func (t *Tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 		log.Println(bodyText)
 		log.Fatal(err)
 	}
-	log.Println("128 in tapsi.go")
-	// bodyText, err := io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	log.Println("134 in tapsi.go")
+	// log.Println("128 in tapsi.go")
+	// log.Println("134 in tapsi.go")
 	// fmt.Println(bodyText)
-	fmt.Println("Raw response:", string(bodyText))
+	// fmt.Println("Raw response:", string(bodyText))
 	var jsonData tapsiResponse
 	err = json.Unmarshal(bodyText, &jsonData)
 	if err != nil {
 		fmt.Println("test")
 		log.Fatal(err)
 	}
-	log.Println("140 in tapsi.go")
+	// log.Println("140 in tapsi.go")
 	if resp.StatusCode != 200 {
 		log.Fatal("Status code is not 200")
 	}

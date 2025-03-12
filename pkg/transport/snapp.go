@@ -3,7 +3,6 @@ package transport
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -64,7 +63,7 @@ func NewSnapp(s *configs.SnappConfig) *Snapp {
 }
 
 func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int {
-	fmt.Println("dibididbididbi in snapp.go")
+	// fmt.Println("dibididbididbi in snapp.go")
 	data := snappRequest{
 		Points: []*snappPoint{
 			{Lat: originLat, Lng: originLong},
@@ -81,14 +80,13 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("85 in snapp.go")
 	body := bytes.NewReader(dataBytes)
 	req, err := http.NewRequest("POST", "https://app.snapp.taxi/api/api-base/v2/passenger/newprice/s/6/0", body)
 	if err != nil {
 		log.Fatal(err)
 	}
 	s.SetHeader(req)
-	log.Println("92 in snapp.go")
+	// log.Println("92 in snapp.go")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -100,13 +98,13 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("104 in snapp.go")
+	// log.Println("104 in snapp.go")
 	var jsonData snappResponse
 	err = json.Unmarshal(bodyText, &jsonData)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(resp.StatusCode)
+	// log.Println(resp.StatusCode)
 
 	if resp.StatusCode != 200 {
 		log.Fatal("Status code is not 200")

@@ -33,7 +33,7 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionId := session.SessionKey
-	log.Println(sessionId)
+	// log.Println(sessionId)
 	postToken := session.PostToken
 	oauth, err := k.kenarService.GetOAuthBySessionId(sessionId)
 	if err != nil {
@@ -53,9 +53,7 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 	// log.Println(coordinates.Latitude)
 
 	stationResult, err := k.transportService.FindNearestStation(coordinates.Latitude, coordinates.Longitude)
-
-	// result, err := pkg.GetSubwayStationHandler("35.705080137369734", "51.3493")
-	fmt.Println(stationResult)
+	// fmt.Println(stationResult)
 	dest_lat := strconv.FormatFloat(stationResult.StationLat, 'f', -1, 64)
 	dest_long := strconv.FormatFloat(stationResult.StationLong, 'f', -1, 64)
 	// res, err := k.taxiService.GetPrice(coordinates.Latitude, coordinates.Longitude, dest_lat, dest_long)
@@ -63,7 +61,7 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Could no fetch prices to the station", http.StatusNotFound)
 	}
-	fmt.Println(prices)
+	// fmt.Println(prices)
 	descriptionText := fmt.Sprintf(
 		"نزدیک‌ترین ایستگاه مترو: %s\n"+
 			"فاصله تا ایستگاه: %s\n"+
@@ -77,8 +75,8 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		prices["snapp"],
 		prices["tapsi"],
 	)
-	log.Println("=================================")
-	log.Println(descriptionText)
+	// log.Println("=================================")
+	// log.Println(descriptionText)
 	k.kenarService.PostWidgets(postToken, oauth.AccessToken, descriptionText)
 
 }
