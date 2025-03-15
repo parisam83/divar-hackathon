@@ -99,7 +99,7 @@ func (n *Neshan) GetSearchResult(startLat, startLong float64) ([]Items, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Error: %s", resp.Status)
+		return nil, fmt.Errorf("error: %s", resp.Status)
 	}
 
 	var searchResult SearchResult

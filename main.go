@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
-	"reflect"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/handlers"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
@@ -45,8 +43,8 @@ func main() {
 
 	query := db.New(conPool)
 	sessionStore := utils.NewSessionStore(&conf.Session)
-	fmt.Println(conf.Session.AuthKey)
-	fmt.Println(reflect.ValueOf(conf.Session.AuthKey).Kind())
+	// fmt.Println(conf.Session.AuthKey)
+	// fmt.Println(reflect.ValueOf(conf.Session.AuthKey).Kind())
 
 	oauthService := services.NewOAuthService(conf.Kenar, query)
 	oauthHandler := handlers.NewOAuthHandler(sessionStore, oauthService)

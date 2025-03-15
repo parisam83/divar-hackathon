@@ -50,7 +50,8 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Couldn't fetch the coordinates "+err.Error(), http.StatusNotFound)
 	}
-	// log.Println(coordinates.Latitude)
+	log.Println("origin: " + coordinates.Latitude)
+	log.Println("origin: " + coordinates.Longitude)
 
 	stationResult, err := k.transportService.FindNearestStation(coordinates.Latitude, coordinates.Longitude)
 	// fmt.Println(stationResult)

@@ -7,7 +7,6 @@ import (
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
-
 	"github.com/google/uuid"
 )
 
@@ -70,11 +69,11 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	// check existing session
 	session, err := h.store.GetExistingSession(w, r)
 	if err == nil && session != nil {
-		log.Println(session.SessionKey)
+		log.Println("session key is: " + session.SessionKey)
 		log.Println("User has entered before?!")
 		url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
 		http.Redirect(w, r, url, http.StatusSeeOther)
-		// return
+		return
 	}
 	//create new session
 	session, err = h.store.CreateNewSession(w, r, postToken)
@@ -136,6 +135,7 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	session.State = ""
 	//add sessionKey to the reuqest
 	session.SessionKey = uuid.New().String()
+	log.Println("This is the access token " + token.AccessToken)
 
 	//save the new session
 	h.store.SaveSession(w, r, session)
