@@ -63,7 +63,6 @@ func NewSnapp(s *configs.SnappConfig) *Snapp {
 }
 
 func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int {
-	// fmt.Println("dibididbididbi in snapp.go")
 	data := snappRequest{
 		Points: []*snappPoint{
 			{Lat: originLat, Lng: originLong},
@@ -86,7 +85,7 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 		log.Fatal(err)
 	}
 	s.SetHeader(req)
-	// log.Println("92 in snapp.go")
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -98,13 +97,12 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 	if err != nil {
 		log.Fatal(err)
 	}
-	// log.Println("104 in snapp.go")
+
 	var jsonData snappResponse
 	err = json.Unmarshal(bodyText, &jsonData)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// log.Println(resp.StatusCode)
 
 	if resp.StatusCode != 200 {
 		log.Fatal("Status code is not 200")
@@ -126,10 +124,6 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 }
 
 func (s *Snapp) SetHeader(req *http.Request) {
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Referer", "https://app.snapp.taxi/pre-ride?utm_source=landing&utm_medium=request-button&utm_campaign=taxi&_gl=1*6bvi14*_gcl_au*MTEzNjQxNTUwMy4xNzQwNTc4NzI0")
@@ -139,11 +133,5 @@ func (s *Snapp) SetHeader(req *http.Request) {
 		"_clck="+s.clck+"_ga_Y4QV007ERR="+s.ga_Y4QV007ERR+"_ga="+s.ga+
 		"_ym_uid="+s.ym_uid+"_ym_d="+s.ym_d+"_ym_isad="+s.ym_isad+
 		"_clsk="+s.clsk)
-	// Print all headers
-	// for key, values := range req.Header {
-	// 	for _, value := range values {
-	// 		fmt.Printf("%s: %s\n", key, value)
-	// 	}
-	// }
 
 }
