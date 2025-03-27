@@ -5,16 +5,60 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Oauth struct {
-	ID           int32              `db:"id" json:"id"`
-	SessionID    string             `db:"session_id" json:"session_id"`
-	AccessToken  string             `db:"access_token" json:"access_token"`
-	RefreshToken string             `db:"refresh_token" json:"refresh_token"`
-	ExpiresIn    pgtype.Timestamp   `db:"expires_in" json:"expires_in"`
-	PostToken    string             `db:"post_token" json:"post_token"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+type PoiType string
+
+const (
+	PoiTypeSubway   PoiType = "subway"
+	PoiTypeHospital PoiType = "hospital"
+	PoiTypeMall     PoiType = "mall"
+)
+
+func (e *PoiType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PoiType(s)
+	case string:
+		*e = PoiType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PoiType: %T", src)
+	}
+	return nil
+}
+
+type NullPoiType struct {
+	PoiType PoiType `json:"poi_type"`
+	Valid   bool    `json:"valid"` // Valid is true if PoiType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPoiType) Scan(value interface{}) error {
+	if value == nil {
+		ns.PoiType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PoiType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPoiType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PoiType), nil
+}
+
+type Poi struct {
+	ID        int32            `db:"id" json:"id"`
+	Name      string           `db:"name" json:"name"`
+	Type      PoiType          `db:"type" json:"type"`
+	Latitude  interface{}      `db:"latitude" json:"latitude"`
+	Longitude interface{}      `db:"longitude" json:"longitude"`
+	CreatedAt pgtype.Timestamp `db:"created_at" json:"created_at"`
 }

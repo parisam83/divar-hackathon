@@ -28,10 +28,16 @@ type OAuthSession struct {
 }
 
 func NewSessionStore(cfg *configs.SessionConfig) *SessionStore {
-	store := SessionStore{
+	sessionStore := SessionStore{
 		Store: sessions.NewCookieStore([]byte(cfg.AuthKey)),
 	}
-	return &store
+	sessionStore.Store.Options = &sessions.Options{
+		MaxAge:   3600,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+	}
+	return &sessionStore
 }
 
 func (s *SessionStore) Get(r *http.Request, name string) (*sessions.Session, error) {
@@ -45,17 +51,19 @@ func (s *SessionStore) Save(r *http.Request, w http.ResponseWriter, session *ses
 func (h *SessionStore) GetExistingSession(w http.ResponseWriter, r *http.Request) (*OAuthSession, error) {
 	oauthSession, err := h.Get(r, SessionName)
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Failed to get session: "+err.Error())
+		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
-
+	if oauthSession.IsNew {
+		return nil, fmt.Errorf("no existing session found")
+	}
 	data, ok := oauthSession.Values[SessionKey].([]byte)
 	if !ok {
-		return nil, fmt.Errorf("%s", "No session data found ")
+		return nil, fmt.Errorf("session exists but no data found")
 	}
 
 	session := &OAuthSession{}
 	if err := json.Unmarshal(data, session); err != nil {
-		return nil, fmt.Errorf("%s", "failed to decode session:"+err.Error())
+		return nil, fmt.Errorf("failed to decode session: %w", err)
 	}
 	return session, nil
 }
@@ -68,15 +76,16 @@ func (h *SessionStore) SaveSession(w http.ResponseWriter, r *http.Request, sessi
 
 	sessionJson, err := json.Marshal(session)
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Failed to marshal session: "+err.Error())
+		return nil, fmt.Errorf("failed to marshal session: %w", err)
 	}
 
 	oauthSession.Values[SessionKey] = sessionJson
 	err = h.Save(r, w, oauthSession)
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Failed to save session: "+err.Error())
+		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
-	log.Printf("Session saved successfully with state: %s", session.State)
+
+	log.Println("new session saved successfully")
 	return session, nil
 
 }

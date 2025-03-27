@@ -46,10 +46,6 @@ func main() {
 	// fmt.Println(conf.Session.AuthKey)
 	// fmt.Println(reflect.ValueOf(conf.Session.AuthKey).Kind())
 
-	oauthService := services.NewOAuthService(conf.Kenar, query)
-	oauthHandler := handlers.NewOAuthHandler(sessionStore, oauthService)
-	// oauthHandler := handlers.NewOAuthHandler(oauthService)
-
 	snapp := transport.NewSnapp(&conf.Snapp)
 	// log.Println(conf.Snapp.ApiKey)
 	tapsi := transport.NewTapsi(&conf.Tapsi)
@@ -58,6 +54,10 @@ func main() {
 
 	kenarService := services.NewKenarService(conf.Kenar.ApiKey, "https://api.divar.ir/v1/open-platform", query)
 	kenarHandler := handlers.NewKenarHandler(sessionStore, kenarService, taxiService)
+
+	oauthService := services.NewOAuthService(conf.Kenar, query)
+	oauthHandler := handlers.NewOAuthHandler(sessionStore, oauthService, kenarService)
+	// oauthHandler := handlers.NewOAuthHandler(oauthService)
 
 	r := mux.NewRouter()
 

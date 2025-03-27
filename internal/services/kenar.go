@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -46,6 +45,10 @@ type Payload struct {
 	Widgets []Row `json:"widgets"`
 }
 
+type UserInfo struct {
+	UserId string `json:"user_id"`
+}
+
 func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
 	return &KenarService{
 		apiKey:  apiKey,
@@ -55,9 +58,17 @@ func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
 	}
 }
 
-func (k *KenarService) GetOAuthBySessionId(sessionId string) (db.Oauth, error) {
-	return k.queries.GetOAuthBySessionId(context.Background(), sessionId)
-
+func (k *KenarService) GetUserInformation(accessToken string) (*UserInfo, error) {
+	k.client.SetHeader("x-access-token", accessToken)
+	resp, err := k.client.R().Get("https://api.divar.ir/v1/open-platform/users")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user information: %w", err)
+	}
+	var UserInfo UserInfo
+	if err := json.Unmarshal(resp.Body(), &UserInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal user information: %w", err)
+	}
+	return &UserInfo, nil
 }
 
 func (k *KenarService) PostWidgets(postToken, accessToke, description string) {
@@ -75,6 +86,7 @@ func (k *KenarService) PostWidgets(postToken, accessToke, description string) {
 		fmt.Println("Error marshaling JSON:", err)
 		return
 	}
+	accessToke = "ory_at_nbQrk18yU0lWJmnAMd-icaOr1ONGsR6-YX8Px8VYZ-8.Zx5JuCzjFFyQ1ELXRM-HAbZIJZsazNjJE8NPNOrJUJE"
 	resp, err := k.client.R().SetHeader("x-access-token", accessToke).SetBody(jsonData).Post(AddWidgetUrl + postToken)
 	if err != nil {
 		log.Println("failed to post widgets %w", err)

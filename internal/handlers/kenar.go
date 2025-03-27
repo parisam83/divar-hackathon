@@ -32,10 +32,10 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sessionId := session.SessionKey
+	// sessionId := session.SessionKey
 	// log.Println(sessionId)
 	postToken := session.PostToken
-	oauth, err := k.kenarService.GetOAuthBySessionId(sessionId)
+	// oauth, err := k.kenarService.GetOAuthBySessionId(sessionId)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "no session found", http.StatusNotFound)
@@ -65,7 +65,7 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println(prices)
 	descriptionText := fmt.Sprintf(
 		"نزدیک‌ترین ایستگاه مترو: %s\n"+
-			"فاصله تا ایستگاه: %s\n"+
+			"ههههههههفاصله تا ایستگاه: %s\n"+
 			"زمان رسیدن به ایستگاه: %s\n\n"+
 			"قیمت تخمینی تاکسی‌های آنلاین تا ایشتگاه مترو:\n"+
 			"اسنپ: %v تومان\n"+
@@ -77,7 +77,7 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		prices["tapsi"],
 	)
 	// log.Println("=================================")
-	// log.Println(descriptionText)
-	k.kenarService.PostWidgets(postToken, oauth.AccessToken, descriptionText)
+	log.Println(descriptionText)
+	// k.kenarService.PostWidgets(postToken, oauth.AccessToken, descriptionText)
 
 }

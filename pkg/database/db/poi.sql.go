@@ -7,32 +7,37 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const addPOIResult = `-- name: AddPOIResult :exec
-INSERT INTO poi (post_token, place_id, distance, duration, snapp_cost, tapsi_cost)
-VALUES ($1, $2, $3, $4, $5, $6)
+const getOrCreatePoi = `-- name: GetOrCreatePoi :one
+INSERT INTO poi(name, type, latitude, longitude)
+VALUES ($1,$2,$3,$4)
+ON CONFLICT (name, type) DO NOTHING
+RETURNING id, name, type, latitude, longitude, created_at
 `
 
-type AddPOIResultParams struct {
-	PostToken string         `db:"post_token" json:"post_token"`
-	PlaceID   pgtype.Int4    `db:"place_id" json:"place_id"`
-	Distance  pgtype.Numeric `db:"distance" json:"distance"`
-	Duration  pgtype.Numeric `db:"duration" json:"duration"`
-	SnappCost pgtype.Numeric `db:"snapp_cost" json:"snapp_cost"`
-	TapsiCost pgtype.Numeric `db:"tapsi_cost" json:"tapsi_cost"`
+type GetOrCreatePoiParams struct {
+	Name      string      `db:"name" json:"name"`
+	Type      PoiType     `db:"type" json:"type"`
+	Latitude  interface{} `db:"latitude" json:"latitude"`
+	Longitude interface{} `db:"longitude" json:"longitude"`
 }
 
-func (q *Queries) AddPOIResult(ctx context.Context, arg AddPOIResultParams) error {
-	_, err := q.db.Exec(ctx, addPOIResult,
-		arg.PostToken,
-		arg.PlaceID,
-		arg.Distance,
-		arg.Duration,
-		arg.SnappCost,
-		arg.TapsiCost,
+func (q *Queries) GetOrCreatePoi(ctx context.Context, arg GetOrCreatePoiParams) (Poi, error) {
+	row := q.db.QueryRow(ctx, getOrCreatePoi,
+		arg.Name,
+		arg.Type,
+		arg.Latitude,
+		arg.Longitude,
 	)
-	return err
+	var i Poi
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Type,
+		&i.Latitude,
+		&i.Longitude,
+		&i.CreatedAt,
+	)
+	return i, err
 }

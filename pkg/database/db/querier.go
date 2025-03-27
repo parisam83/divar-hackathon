@@ -9,11 +9,11 @@ import (
 )
 
 type Querier interface {
-	AddOAuthData(ctx context.Context, arg AddOAuthDataParams) error
-	AddPOIResult(ctx context.Context, arg AddPOIResultParams) error
-	AddPlace(ctx context.Context, arg AddPlaceParams) error
-	AddPost(ctx context.Context, arg AddPostParams) error
-	GetOAuthBySessionId(ctx context.Context, sessionID string) (Oauth, error)
+	CreateTravelMetric(ctx context.Context, arg CreateTravelMetricParams) error
+	GetOrCreatePoi(ctx context.Context, arg GetOrCreatePoiParams) (Poi, error)
+	InsertPost(ctx context.Context, arg InsertPostParams) error
+	InsertUser(ctx context.Context, id string) error
+	UpdatePostCoordinates(ctx context.Context, arg UpdatePostCoordinatesParams) error
 }
 
 var _ Querier = (*Queries)(nil)

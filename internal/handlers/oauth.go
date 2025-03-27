@@ -7,7 +7,6 @@ import (
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
-	"github.com/google/uuid"
 )
 
 type OauthResourceType string
@@ -15,6 +14,7 @@ type OauthResourceType string
 const (
 	POST_ADDON_CREATE  OauthResourceType = "POST_ADDON_CREATE"
 	USER_PHONE         OauthResourceType = "USER_PHONE"
+	USER_ID            OauthResourceType = "USER_ID"
 	OFFLINE_ACCESS     OauthResourceType = "offline_access"
 	DefaultRedirectURL                   = "https://divar.ir/"
 )
@@ -26,21 +26,29 @@ type Scope struct {
 
 type oAuthHandler struct {
 	oauthService *services.OAuthService
+	kenarService *services.KenarService
 	store        *utils.SessionStore
 }
 
-func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService) *oAuthHandler {
+func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService) *oAuthHandler {
+	if store == nil {
+		log.Fatal("cookie store can not be nil")
+	}
+	if serv == nil {
+		log.Fatal("oauth service can not be nil")
+	}
 
 	return &oAuthHandler{
 		store:        store,
 		oauthService: serv,
+		kenarService: kenar,
 	}
 }
 
 func (h *oAuthHandler) buildScopes(postToken string) []string {
 	oauthScopes := []Scope{
 		{resourceType: POST_ADDON_CREATE, resourceID: postToken},
-		{resourceType: USER_PHONE},
+		{resourceType: USER_ID},
 		{resourceType: OFFLINE_ACCESS},
 	}
 
@@ -56,7 +64,6 @@ func (h *oAuthHandler) buildScopes(postToken string) []string {
 }
 
 func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
-	// Add this function to your handlers
 	log.Println("AddonOauth called")
 
 	postToken := r.URL.Query().Get("post_token")
@@ -66,26 +73,16 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
 		return
 	}
-	// check existing session
 	session, err := h.store.GetExistingSession(w, r)
-	if err == nil && session != nil {
-		log.Println("session key is: " + session.SessionKey)
-		log.Println("User has entered before?!")
-		url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
-		http.Redirect(w, r, url, http.StatusSeeOther)
-		return
+	if err != nil || session.PostToken != postToken {
+		session, err = h.store.CreateNewSession(w, r, postToken)
+		if err != nil {
+			http.Error(w, "Failed to create session: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
-	//create new session
-	session, err = h.store.CreateNewSession(w, r, postToken)
-	if err != nil {
-		http.Error(w, "Failed to create session: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	log.Printf("New session created with state: %s", session.State)
-
 	// creating scopes
 	scopes := h.buildScopes(postToken)
-
 	redirect_url := h.oauthService.GenerateAuthURL(scopes, session.State)
 	http.Redirect(w, r, redirect_url, http.StatusFound)
 
@@ -129,31 +126,44 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	userDetail, err := h.kenarService.GetUserInformation(token.AccessToken)
+	err = h.oauthService.InsertUser(userDetail.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	err = h.oauthService.InsertPost(session.PostToken, userDetail.UserId, token.AccessToken, token.RefreshToken, token.Expiry)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	//update session
 	// deleting state from session because we dont need it after oauth
-	session.State = ""
-	//add sessionKey to the reuqest
-	session.SessionKey = uuid.New().String()
-	log.Println("This is the access token " + token.AccessToken)
+	// session.State = ""
+	// add sessionKey to the reuqest
+	// session.SessionKey = uuid.New().String()
+	// log.Println("new session id is " + session.SessionKey)
+	// log.Println("This is the access token " + token.AccessToken)
+	// add the user to database if the user existed
+	// add the post to the database
 
-	//save the new session
-	h.store.SaveSession(w, r, session)
+	// //save the new session
+	// h.store.SaveSession(w, r, session)
+	// log.Println(h.store.GetExistingSession(w, r))
 
-	// Save token in database
-	if err := h.oauthService.InsertOAuthData(
-		session.SessionKey,
-		token.AccessToken,
-		token.RefreshToken,
-		session.PostToken,
-		// time.Unix(token.Expiry.Unix(), 0),
-		token.Expiry,
-	); err != nil {
-		http.Error(w, "Failed to save token in database"+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// // Save token in database
+	// if err := h.oauthService.InsertOAuthData(
+	// 	session.SessionKey,
+	// 	token.AccessToken,
+	// 	token.RefreshToken,
+	// 	session.PostToken,
+	// 	// time.Unix(token.Expiry.Unix(), 0),
+	// 	token.Expiry,
+	// ); err != nil {
+	// 	http.Error(w, "Failed to save token in database"+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
-	http.Redirect(w, r, url, http.StatusSeeOther)
+	// url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
+	// http.Redirect(w, r, url, http.StatusSeeOther)
 
 }
