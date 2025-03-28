@@ -8,6 +8,7 @@ import (
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/handlers"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/transport"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
@@ -23,7 +24,7 @@ func main() {
 		log.Fatalf("failed to load configurations: %s\n", err)
 	}
 
-	conPool, err := utils.ConnectToDatabase(
+	conPool, err := database.ConnectToDatabase(
 		context.Background(),
 		conf.Database.Username,
 		conf.Database.Password,

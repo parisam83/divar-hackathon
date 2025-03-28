@@ -1,7 +1,8 @@
-package utils
+package database
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"log"
 	"net/url"
@@ -10,8 +11,12 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Postgres driver
 	_ "github.com/golang-migrate/migrate/v4/source/file"       //  'file' source driver
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+//go:embed migrations/*.sql
+var migrationFileSystem embed.FS
 
 func ConnectToDatabase(
 	serverContext context.Context,
@@ -68,11 +73,23 @@ func ConnectToDatabase(
 		pool.Close()
 		return nil, fmt.Errorf("unable to reach database: %w", err)
 	}
-	m, err := migrate.New("file:///home/divar/Realestate-POI/pkg/database/migrations", pgURL.String())
+	// m, err := migrate.New("file:///home/divar/Realestate-POI/pkg/database/migrations", pgURL.String())
+	// if err != nil {
+	// 	pool.Close()
+	// 	return nil, fmt.Errorf("migration initialization failed: %w", err)
+	// }
+	driver, err := iofs.New(migrationFileSystem, "migrations")
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("failed to load migrations: %w", err)
+
+	}
+	m, err := migrate.NewWithSourceInstance("iofs", driver, pgURL.String())
 	if err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("migration initialization failed: %w", err)
 	}
+
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
 		pool.Close()
