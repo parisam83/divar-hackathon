@@ -21,10 +21,11 @@ type SessionStore struct {
 }
 
 type OAuthSession struct {
-	PostToken   string `json:"post_token"`
-	State       string `json:"state"`
-	CallbackURL string `json:"callback_url"`
-	SessionKey  string `json:"session_key"`
+	PostToken  string `json:"post_token"`
+	State      string `json:"state"`
+	ReturnUrl  string `json:"return_url"`
+	IsBuyer    bool   `json:"is_buyer"`
+	SessionKey string `json:"session_key"`
 }
 
 func NewSessionStore(cfg *configs.SessionConfig) *SessionStore {
@@ -90,11 +91,13 @@ func (h *SessionStore) SaveSession(w http.ResponseWriter, r *http.Request, sessi
 
 }
 
-func (h *SessionStore) CreateNewSession(w http.ResponseWriter, r *http.Request, postToken string) (*OAuthSession, error) {
+func (h *SessionStore) CreateNewSession(w http.ResponseWriter, r *http.Request, postToken, returnUrl string, isBuyer bool) (*OAuthSession, error) {
 	state := uuid.New().String()
 	session := &OAuthSession{
 		PostToken: postToken,
+		ReturnUrl: returnUrl,
 		State:     state,
+		IsBuyer:   isBuyer,
 	}
 	return h.SaveSession(w, r, session)
 }

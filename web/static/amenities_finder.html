@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جستجوی امکانات نزدیک | دیوار</title>
+     <!-- Leaflet for map display -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="./css/amenities.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>جستجوی امکانات نزدیک</h1>
+            <p>نزدیکترین ایستگاه مترو و بیمارستان به ملک خود را پیدا کنید و به آگهی اضافه کنید</p>
+            <a href="./landing.html" class="back-link">بازگشت به صفحه اصلی</a>
+        </header>
+
+        <div class="content-section">
+            <h2>موقعیت ملک شما</h2>
+            <div class="property-info">
+                <div class="label">آدرس:</div>
+                <div class="value" id="origin-address">در حال بارگذاری...</div>
+            </div>
+            <div class="property-info">
+                <div class="label">مختصات:</div>
+                <div class="value" id="origin-coords"></div>
+            </div>
+            <div id="origin-map"></div>
+        </div>
+
+        <div class="content-section">
+            <h2>جستجوی امکانات</h2>
+            <p>با کلیک بر روی دکمه زیر، نزدیکترین ایستگاه مترو و بیمارستان به ملک شما پیدا می‌شود.</p>
+            <button class="btn btn-primary" id="find-amenities-btn">یافتن مترو و بیمارستان نزدیک</button>
+            <div id="status-message" class="status-message" style="display: none;"></div>
+        </div>
+
+        <div id="amenities-results" class="results-area">
+            <h3>امکانات نزدیک یافت شده:</h3>
+            <div class="amenity-item">
+                <p id="nearest-subway"><strong>ایستگاه مترو:</strong> <span></span></p>
+            </div>
+            <div class="amenity-item">
+                <p id="nearest-hospital"><strong>بیمارستان:</strong> <span></span></p>
+            </div>
+            <p style="margin-top:15px; font-style: italic;">در صورت تایید، این اطلاعات به آگهی شما اضافه خواهد شد.</p>
+            <button class="btn btn-approve" id="approve-amenities-btn">تایید و افزودن به آگهی</button>
+        </div>
+    </div>
+
+    <script>
+        let origin = null;
+        let originMap = null;
+        let postToken = null;
+        let returnUrl = null;
+
+        // DOM Elements
+        const findBtn = document.getElementById('find-amenities-btn');
+        const approveBtn = document.getElementById('approve-amenities-btn');
+        const resultsDiv = document.getElementById('amenities-results');
+        const statusDiv = document.getElementById('status-message');
+        const originAddressEl = document.getElementById('origin-address');
+        const originCoordsEl = document.getElementById('origin-coords');
+        const originMapDiv = document.getElementById('origin-map');
+        const subwayResultEl = document.querySelector('#nearest-subway span');
+        const hospitalResultEl = document.querySelector('#nearest-hospital span');
+
+        // Get token and redirect URL from query parameters
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            postToken = urlParams.get('post_token');
+            returnUrl = urlParams.get('return_url');
+            
+            if (!postToken) {
+                console.warn("No post_token found in URL parameters");
+            }
+        }
+
+        // Fetch property location using token
+        async function fetchOriginCoordinates() {
+            try {
+                // Call backend API with token to get origin location
+                // In a real app, this would be a fetch to your backend
+                console.log("Fetching origin with token:", postToken);
+                
+                // Simulated API call - replace with actual call to your Go backend
+                // return new Promise(resolve => {
+                //     setTimeout(() => {
+                //         const fetchedOrigin = {
+                //             lat: 35.7219, // Example: Tajrish area
+                //             lng: 51.3347,
+                //             address: "تهران، میدان تجریش"
+                //         };
+                //         console.log("Origin fetched:", fetchedOrigin);
+                //         resolve(fetchedOrigin);
+                //     }, 800);
+                // });
+                
+                const response = await fetch('/api/get-origin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ post_token: postToken})
+                });
+                
+                if (!response.ok) {
+                    throw new Error('خطا در دریافت موقعیت ملک');
+                }
+                
+                const data = await response.json();
+                return {
+                    lat: parseFloat(data.Latitude),
+                    lng: parseFloat(data.Longitude),
+                    address: data.address || "موقعیت ملک شما"
+                };
+
+            } catch (error) {
+                console.error("Error fetching origin:", error);
+                return null;
+            }
+        }
+
+        // Find nearby amenities
+        async function findNearbyPlaces(lat, lng) {
+            try {
+                updateStatus('در حال جستجوی نزدیکترین مترو و بیمارستان...', 'loading');
+                
+                // Simulated API call - replace with actual call to your Go backend
+                // return new Promise(resolve => {
+                //     setTimeout(() => {
+                //         // Dummy data - replace with real results
+                //         const results = {
+                //             subway: { name: "ایستگاه مترو تجریش", distance: 0.5 },
+                //             hospital: { name: "بیمارستان شهدای تجریش", distance: 1.2 }
+                //         };
+                //         console.log("Nearby places found:", results);
+                //         resolve(results);
+                //     }, 1500);
+                // });
+                
+                const response = await fetch('/api/find-amenities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        post_token: postToken,
+                        lat: lat,
+                        lng: lng
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('خطا در جستجوی امکانات نزدیک');
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error("Error finding amenities:", error);
+                throw error;
+            }
+        }
+
+        // Add amenities to ad
+        async function addToAd(amenitiesData) {
+            try {
+                updateStatus('در حال اضافه کردن اطلاعات به آگهی شما...', 'loading');
+                
+        
+                const response = await fetch('/api/add-to-ad', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        post_token: postToken,
+                        subway: amenitiesData.subway,
+                        hospital: amenitiesData.hospital
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error('خطا در اضافه کردن به آگهی');
+                }
+                
+                const data =  await response.json();
+                return { ok: true, data }; 
+            } catch (error) {
+                console.error("Error adding to ad:", error);
+                throw error;
+            }
+        }
+
+        // Display status message
+        function updateStatus(message, type = 'info', show = true) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message ${type}`; // Reset classes
+            statusDiv.style.display = show ? 'block' : 'none';
+        }
+
+        // Display property location
+        function displayOrigin(originData) {
+            originAddressEl.textContent = originData.address;
+            originCoordsEl.textContent = `${originData.lat.toFixed(4)}, ${originData.lng.toFixed(4)}`;
+
+            // Display origin on a map
+            if (L && originMapDiv) {
+                if (originMap) originMap.remove(); // Remove previous map if exists
+                originMap = L.map(originMapDiv, { dragging: false, zoomControl: false, scrollWheelZoom: false }).setView([originData.lat, originData.lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(originMap);
+                L.marker([originData.lat, originData.lng]).addTo(originMap)
+                    .bindPopup("موقعیت ملک شما")
+                    .openPopup();
+            }
+        }
+        let amenitiesResults = null; // Store the results globally
+
+    // Fix the displayResults function
+    function displayResults(results) {
+        console.log("Results received:", results);
+        amenitiesResults = results; // Store results for later use
+        
+        try {
+            // Handle subway information
+            if (results && results.subway) {
+                let subwayText = `${results.subway.name} `;
+                
+                // Convert meters to a readable format
+                const distanceInMeters = parseInt(results.subway.distance);
+                if (distanceInMeters >= 1000) {
+                    const km = (distanceInMeters / 1000).toFixed(1);
+                    subwayText += `(${km} کیلومتر`;
+                } else {
+                    subwayText += `(${distanceInMeters} متر`;
+                }
+
+                // Add duration if available
+                if (results.subway.duration) {
+                    subwayText += ` - ${results.subway.duration} دقیقه با ماشین`;
+                }
+                subwayText += ")";
+                
+                // Set text content
+                if (subwayResultEl) {
+                    subwayResultEl.textContent = subwayText;
+                }
+            }
+
+            // Just access the elements directly by ID instead of using querySelector
+            const subwayItem = document.getElementById('nearest-subway').parentElement;
+            const hospitalItem = document.getElementById('nearest-hospital').parentElement;
+            
+            if (subwayItem) subwayItem.style.display = results?.subway ? 'block' : 'none';
+            if (hospitalItem) hospitalItem.style.display = 'none'; // Hide hospital for now
+            
+            // Show results and update buttons
+            if (resultsDiv) resultsDiv.style.display = 'block';
+            if (approveBtn) approveBtn.disabled = false;
+            if (findBtn) findBtn.disabled = true;
+            
+            updateStatus('امکانات نزدیک پیدا شد. لطفا بررسی و تایید کنید.', 'success');
+        } catch (error) {
+            console.error("Error in displayResults:", error);
+            updateStatus('خطا در نمایش نتایج', 'error');
+        }
+    }
+     
+        // Handle find amenities button click
+        function handleFindAmenities() {
+            if (!origin) {
+                updateStatus("موقعیت ملک هنوز بارگذاری نشده است.", 'error');
+                return;
+            }
+
+            findBtn.disabled = true; // Disable while processing
+            updateStatus('در حال پردازش...', 'loading');
+
+            findNearbyPlaces(origin.lat, origin.lng)
+                .then(results => {
+                    displayResults(results);
+                })
+                .catch(error => {
+                    console.error("Error finding amenities:", error);
+                    updateStatus(`خطا: ${error.message || 'خطا در جستجوی امکانات نزدیک'}`, 'error');
+                    findBtn.disabled = false; // Re-enable on error
+                });
+        }
+
+        // Handle approve button click
+        function handleApproval() {
+            if (!resultsDiv.style.display || resultsDiv.style.display === 'none') {
+                console.warn("Approval clicked but no results shown.");
+                return;
+            }
+            
+            approveBtn.disabled = true; 
+
+            // Create structured data for the backend
+            const amenityData = {
+                post_token: postToken,
+                subway: {
+                    name: amenitiesResults.subway.name,
+                    distance: amenitiesResults.subway.distance,
+                    duration: amenitiesResults.subway.duration
+                }
+            };
+
+            addToAd(amenityData)
+                .then(response => {
+                    if (response.ok) {
+                        updateStatus('اطلاعات با موفقیت به آگهی شما اضافه شد!', 'success');
+                        
+                        // Redirect back to Divar if returnUrl is available
+                        if (returnUrl) {
+                            setTimeout(() => {
+                                window.location.href = returnUrl;
+                            }, 2000); // Give user time to see success message
+                        }
+                    } else {
+                        console.log("caught here")
+                        updateStatus('خطا در اضافه کردن به آگهی. لطفا دوباره تلاش کنید.', 'error');
+                        approveBtn.disabled = false; // Re-enable on failure
+                    }
+                })
+                .catch(error => {
+                    console.log("shiiiiiiiiiiiiiit")
+                    console.error("Error adding to ad:", error);
+                    updateStatus('خطا در اضافه کردن به آگهی. لطفا دوباره تلاش کنید.', 'error');
+                    approveBtn.disabled = false; // Re-enable on error
+                });
+        }
+
+        // Handle approve button click
+        // function handleApproval() {
+        //     if (!resultsDiv.style.display || resultsDiv.style.display === 'none') {
+        //         console.warn("Approval clicked but no results shown.");
+        //         return;
+        //     }
+            
+        //     approveBtn.disabled = true; // Prevent double clicking
+        //     const amenityData = {
+        //         subway: subwayResultEl.textContent,
+        //         hospital: hospitalResultEl.textContent
+        //     };
+
+        //     addToAd(amenityData)
+        //         .then(response => {
+        //             if (response.success) {
+        //                 updateStatus('اطلاعات با موفقیت به آگهی شما اضافه شد!', 'success');
+                        
+        //                 // Redirect back to Divar if returnUrl is available
+        //                 if (returnUrl) {
+        //                     setTimeout(() => {
+        //                         window.location.href = returnUrl;
+        //                     }, 2000); // Give user time to see success message
+        //                 }
+        //             } else {
+        //                 updateStatus('خطا در اضافه کردن به آگهی. لطفا دوباره تلاش کنید.', 'error');
+        //                 approveBtn.disabled = false; // Re-enable on failure
+        //             }
+        //         })
+        //         .catch(error => {
+        //             console.error("Error adding to ad:", error);
+        //             updateStatus('خطا در اضافه کردن به آگهی. لطفا دوباره تلاش کنید.', 'error');
+        //             approveBtn.disabled = false; // Re-enable on error
+        //         });
+        // }
+
+        // Page initialization
+        window.onload = () => {
+            console.log("Page loaded. Initializing...");
+            getTokenFromUrl();
+            updateStatus("در حال بارگذاری موقعیت ملک...", 'loading');
+            
+            fetchOriginCoordinates()
+                .then(originData => {
+                    if (!originData) {
+                        throw new Error("خطا در دریافت موقعیت ملک");
+                    }
+                    origin = originData;
+                    displayOrigin(origin);
+                    findBtn.disabled = false; // Enable button once origin is loaded
+                    updateStatus("موقعیت ملک بارگذاری شد. آماده جستجوی امکانات نزدیک.", 'info');
+                })
+                .catch(error => {
+                    console.error("Failed to fetch origin on load:", error);
+                    originAddressEl.textContent = "خطا در بارگذاری موقعیت ملک";
+                    updateStatus("خطا در بارگذاری موقعیت ملک. لطفا صفحه را دوباره بارگذاری کنید.", 'error');
+                    findBtn.disabled = true;
+                });
+
+            // Event Listeners
+            findBtn.addEventListener('click', handleFindAmenities);
+            approveBtn.addEventListener('click', handleApproval);
+
+            // Initial state
+            findBtn.disabled = true; // Disabled until origin loads
+            approveBtn.disabled = true;
+            resultsDiv.style.display = 'none';
+        };
+    </script>
+</body>
+</html>

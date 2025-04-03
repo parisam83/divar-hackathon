@@ -14,6 +14,7 @@ type Config struct {
 	Database DatabaseConfig
 	Kenar    KenarConfig
 	Session  SessionConfig
+	Jwt      JWTConfig
 	Server   ServerConfig
 	Neshan   NeshanConfig
 	Snapp    SnappConfig
@@ -53,6 +54,11 @@ type SessionConfig struct {
 	// EncKey  string `mapstructure:"SessionEncKey"`
 }
 
+type JWTConfig struct {
+	JwtSecret string `mapstructure:"JwtSecret"`
+	// EncKey  string `mapstructure:"SessionEncKey"`
+}
+
 type SnappConfig struct {
 	ApiKey        string `mapstructure:"access_token"`
 	Clck          string `mapstructure:"clck"`
@@ -80,9 +86,11 @@ func (cfg *KenarConfig) Validate() error {
 }
 
 func LoadConfig() (*Config, error) {
-	err := godotenv.Load("./pkg/configs/.env")
-	if err != nil {
-		log.Fatal("Error loading .env file" + err.Error())
+	if os.Getenv("ENV") == "development" {
+		err := godotenv.Load("./pkg/configs/.env")
+		if err != nil {
+			log.Printf("Error loading .env file in LoadConfig" + err.Error())
+		}
 	}
 
 	viper.SetConfigName("config")
@@ -93,7 +101,7 @@ func LoadConfig() (*Config, error) {
 
 	// check if config file is not provided
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("Error reading config file")
+		log.Printf("Error reading config file")
 	}
 	for _, key := range viper.AllKeys() {
 		value := viper.GetString(key)
@@ -102,7 +110,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	var config Config
-	err = viper.Unmarshal(&config)
+	err := viper.Unmarshal(&config)
 	if err != nil {
 		return nil, err
 	}

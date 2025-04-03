@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اطلاعات تکمیلی ملک | دیوار</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Vazir', 'Tahoma', sans-serif; 
+        }
+        
+        body { 
+            background-color: #f9f9f9; 
+            color: #333; 
+        }
+        
+        .container { 
+            max-width: 600px; 
+            margin: 30px auto; 
+            padding: 20px; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        
+        header { 
+            text-align: center; 
+            margin-bottom: 25px; 
+            padding-bottom: 15px; 
+            border-bottom: 1px solid #eee; 
+        }
+        
+        header h1 { 
+            color: #e74c3c; 
+            margin-bottom: 8px; 
+            font-size: 22px; 
+        }
+        
+        header p { 
+            color: #666; 
+            font-size: 14px; 
+        }
+        
+        .service-card { 
+            background: #f9f9f9; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            border: 1px solid #eee; 
+            display: flex; 
+            align-items: center; 
+            position: relative;
+        }
+        
+        .service-card:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+            border-color: #e74c3c; 
+        }
+        
+        .service-card .icon { 
+            flex: 0 0 50px; 
+            font-size: 28px; 
+            margin-left: 15px; 
+            color: #e74c3c; 
+            text-align: center; 
+        }
+        
+        .service-card .content { 
+            flex: 1; 
+        }
+        
+        .service-card h2 { 
+            font-size: 18px; 
+            margin-bottom: 8px; 
+            color: #333; 
+        }
+        
+        .service-card p { 
+            font-size: 14px; 
+            color: #666; 
+            line-height: 1.4; 
+        }
+        
+        .free-tag {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #2ecc71;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .note { 
+            background-color: #fff8e1; 
+            padding: 12px; 
+            border-radius: 6px; 
+            margin-top: 25px; 
+            font-size: 13px; 
+            color: #795548; 
+            border-right: 3px solid #ffc107; 
+        }
+        
+        .footer { 
+            text-align: center; 
+            font-size: 12px; 
+            color: #999; 
+            margin-top: 25px; 
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: #e74c3c;
+            text-decoration: none;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .feature-list {
+            margin-top: 10px;
+        }
+        
+        .feature-item {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .feature-item:before {
+            content: "✓";
+            color: #e74c3c;
+            margin-left: 6px;
+            font-size: 11px;
+        }
+
+        .view-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 10px;
+            display: inline-block;
+            transition: background-color 0.2s;
+        }
+        
+        .view-button:hover {
+            background-color: #c0392b;
+        }
+        
+        /* Subway info section */
+        .subway-info {
+            display: none;
+            background-color: #f1f8ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid #c9e3ff;
+        }
+        
+        .subway-info-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #c9e3ff;
+            padding-bottom: 10px;
+        }
+        
+        .subway-icon {
+            font-size: 22px;
+            margin-left: 10px;
+            color: #3498db;
+        }
+        
+        .subway-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        
+        .info-label {
+            width: 120px;
+            color: #666;
+        }
+        
+        .info-value {
+            flex: 1;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .info-distance {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .map-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+        
+        .map-link:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>اطلاعات تکمیلی ملک</h1>
+            <p>برای مشاهده جزئیات بیشتر درباره این ملک، یکی از خدمات زیر را انتخاب کنید</p>
+        </header>
+
+        <div class="service-card" id="taxi-service">
+            <div class="icon">🚕</div>
+            <div class="content">
+                <h2>اطلاعات تاکسی و حمل و نقل</h2>
+                <p>هزینه و زمان سفر با تاکسی از این ملک به نقاط مختلف شهر</p>
+                <div class="feature-list">
+                    <div class="feature-item">قیمت تخمینی تاکسی‌های آنلاین</div>
+                    <div class="feature-item">زمان رسیدن به مقاصد مهم</div>
+                </div>
+            </div>
+            <div class="free-tag">رایگان</div>
+        </div>
+
+        <div class="service-card" id="subway-card">
+            <div class="icon">🚇</div>
+            <div class="content">
+                <h2>دسترسی به مترو و امکانات شهری</h2>
+                <p>اطلاعات کامل فاصله این ملک تا ایستگاه مترو و امکانات شهری</p>
+                <div class="feature-list">
+                    <div class="feature-item">فاصله دقیق تا نزدیک‌ترین ایستگاه مترو</div>
+                    <div class="feature-item">فاصله تا مراکز درمانی و خرید</div>
+                </div>
+                
+                <button class="view-button" id="subway-button">مشاهده اطلاعات</button>
+                
+                <!-- Subway Information Section (Hidden by default) -->
+                <div id="subway-info" class="subway-info">
+                    <div class="subway-info-header">
+                        <div class="subway-icon">🚇</div>
+                        <div class="subway-title">نزدیک‌ترین ایستگاه مترو</div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <div class="info-label">نام ایستگاه:</div>
+                        <div class="info-value">ایستگاه مترو شهید بهشتی</div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <div class="info-label">خط مترو:</div>
+                        <div class="info-value">خط 1 (قرمز)</div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <div class="info-label">فاصله:</div>
+                        <div class="info-value"><span class="info-distance">550 متر</span> (حدود 7 دقیقه پیاده‌روی)</div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <div class="info-label">ساعت کاری:</div>
+                        <div class="info-value">5:30 صبح تا 22:30 شب</div>
+                    </div>
+                    
+                    <a href="#" class="map-link">
+                        مشاهده مسیر در نقشه
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="note">
+            <strong>توجه:</strong> هر دو سرویس در حال حاضر به صورت رایگان و آزمایشی در دسترس هستند.
+        </div>
+
+        <div class="footer">
+            این افزونه برای ارتقای تجربه کاربری آگهی‌های دیوار ارائه شده است
+            <br>
+            <a href="#" onclick="window.history.back()" class="back-link">بازگشت به آگهی</a>
+        </div>
+    </div>
+
+    <script>
+        const postToken = new URLSearchParams(window.location.search).get('post_token');
+        
+        // Service selection handlers
+        document.getElementById('taxi-service').addEventListener('click', function() {
+            window.location.href = `/static/taxi.html?post_token=${encodeURIComponent(postToken)}`;
+        });
+        
+        // The subway card itself doesn't redirect anymore
+        document.getElementById('subway-card').addEventListener('mouseover', function() {
+            this.style.cursor = 'default';
+        });
+        
+        // The button shows metro info directly on this page
+        document.getElementById('subway-button').addEventListener('click', function(event) {
+            event.stopPropagation(); // Prevent the card click from triggering
+            
+            // Show loading state
+            this.innerHTML = "در حال بارگذاری...";
+            
+            // Simulate API call delay (1 second)
+            setTimeout(() => {
+                // Show the subway info section
+                document.getElementById('subway-info').style.display = 'block';
+                
+                // Update button text
+                this.innerHTML = "اطلاعات مترو";
+                
+                // Make the card non-hoverable
+                document.getElementById('subway-card').classList.remove('service-card:hover');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خدمات ملک | دیوار</title>
+    <link rel="stylesheet" href="../static/css/lading_styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>خدمات اضافی برای آگهی ملک شما</h1>
+            <p>انتخاب کنید کدام خدمت را می‌خواهید به آگهی خود اضافه کنید</p>
+        </header>
+
+        <div class="service-card" id="taxi-service">
+            <div class="icon">🚕</div>
+            <div class="content">
+                <h2>محاسبه کرایه تاکسی</h2>
+                <p>مسیر و هزینه تاکسی از این خانه به مقصد دلخواه را محاسبه کنید</p>
+            </div>
+        </div>
+
+        <div class="service-card" id="subway-service">
+            <div class="icon">🚇</div>
+            <div class="content">
+                <h2>افزودن نزدیکترین مترو</h2>
+                <p>اطلاعات نزدیکترین ایستگاه مترو و بیمارستان را به آگهی خود اضافه کنید</p>
+            </div>
+        </div>
+        
+        <div class="note">
+            <strong>توجه:</strong> برای استفاده از خدمت «افزودن نزدیکترین مترو»، نیاز به تایید دسترسی وجود دارد.
+        </div>
+
+        <div class="footer">
+            این افزونه برای ارتقای آگهی‌های دیوار ارائه شده است
+        </div>
+    </div>
+
+    <script>
+        // These values are injected by the Go template engine
+        const divarToken = "{{.Token}}"; // Token from Divar
+        const redirectLink = "{{.RedirectLink}}"; // Redirect link from Divar
+        console.log("Token received:", divarToken);
+        console.log("Redirect link received:", redirectLink);
+        //         window.onload = function() {
+        //     // Get URL parameters
+        //     const urlParams = new URLSearchParams(window.location.search);
+        //     const postToken = urlParams.get('post_token');
+        //     const returnUrl = urlParams.get('return_url');
+            
+        //     // Set up the back link with parameters
+        //     const backLink = document.querySelector('.back-link');
+        //     if (backLink && postToken) {
+        //         backLink.href = `index.html?post_token=${encodeURIComponent(postToken)}&return_url=${encodeURIComponent(returnUrl || '')}`;
+        //     }
+            
+        //     // Rest of your initialization code...
+        // };
+
+        
+        // If token is empty (e.g., page loaded directly), show warning
+        if (!divarToken) {
+            alert("این صفحه باید از طریق دیوار بارگذاری شود.");
+        }
+        
+        // Service selection handlers
+        document.getElementById('taxi-service').addEventListener('click', function() {
+            window.location.href = `/static/taxi.html?post_token=${encodeURIComponent(divarToken)}&return_url=${encodeURIComponent(redirectLink)}`;
+        });
+        
+        document.getElementById('subway-service').addEventListener('click', function() {
+            window.location.href = `/static/amenities_finder.html?post_token=${encodeURIComponent(divarToken)}&return_url=${encodeURIComponent(redirectLink)}`;
+        });
+    </script>
+</body>
+</html>

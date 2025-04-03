@@ -1,5 +1,5 @@
 Database:
-  Host: localhost
+  Host: ${DB_HOST}
   Port: 5432
   DBName: poi
   Username: ${DB_USERNAME}
@@ -42,3 +42,6 @@ tapsi:
   refresh_token: "${TAPSI_REFRESH_TOKEN}"
   clck: "${TAPSI_CLCK}"
   clsk: "${TAPSI_CLSK}"
+
+Jwt:
+  JwtSecret: "${JWT_SECRET}"
