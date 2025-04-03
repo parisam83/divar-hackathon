@@ -67,15 +67,16 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	log.Println("AddonOauth called")
 
 	postToken := r.URL.Query().Get("post_token")
-	callback_url := r.URL.Query().Get("return_url")
-
-	if postToken == "" || callback_url == "" {
-		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
+	return_url := r.URL.Query().Get("return_url")
+	isBuyer := return_url == ""
+	if postToken == "" {
+		http.Error(w, "post_token is required", http.StatusBadRequest)
 		return
 	}
 	session, err := h.store.GetExistingSession(w, r)
 	if err != nil || session.PostToken != postToken {
-		session, err = h.store.CreateNewSession(w, r, postToken)
+		log.Println("new person. new post!")
+		session, err = h.store.CreateNewSession(w, r, postToken, return_url, isBuyer)
 		if err != nil {
 			http.Error(w, "Failed to create session: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -126,44 +127,27 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	userDetail, err := h.kenarService.GetUserInformation(token.AccessToken)
-	err = h.oauthService.InsertUser(userDetail.UserId)
+	userDetail, err := h.kenarService.GetUserDetail(token.AccessToken)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	err = h.oauthService.InsertPost(session.PostToken, userDetail.UserId, token.AccessToken, token.RefreshToken, token.Expiry)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to get user information: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	//update session
-	// deleting state from session because we dont need it after oauth
-	// session.State = ""
-	// add sessionKey to the reuqest
-	// session.SessionKey = uuid.New().String()
-	// log.Println("new session id is " + session.SessionKey)
-	// log.Println("This is the access token " + token.AccessToken)
-	// add the user to database if the user existed
-	// add the post to the database
+	properyDetail, err := h.kenarService.GetPropertyDetail(session.PostToken)
+	if err != nil {
+		http.Error(w, "Failed to get coordinates: "+err.Error(), http.StatusInternalServerError)
+	}
+	h.oauthService.RegisterAuthData(r.Context(), &services.Transaction{
+		PropertyDetail: properyDetail,
+		UserDetail:     userDetail,
+		TokenInfo: &services.TokenInfo{
+			RefreshToken: token.RefreshToken,
+			AccessToken:  token.AccessToken,
+			ExpiresIn:    token.Expiry,
+		},
+	})
 
-	// //save the new session
-	// h.store.SaveSession(w, r, session)
-	// log.Println(h.store.GetExistingSession(w, r))
-
-	// // Save token in database
-	// if err := h.oauthService.InsertOAuthData(
-	// 	session.SessionKey,
-	// 	token.AccessToken,
-	// 	token.RefreshToken,
-	// 	session.PostToken,
-	// 	// time.Unix(token.Expiry.Unix(), 0),
-	// 	token.Expiry,
-	// ); err != nil {
-	// 	http.Error(w, "Failed to save token in database"+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/poi")
-	// http.Redirect(w, r, url, http.StatusSeeOther)
+	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/api/main?post_token=%s&return_url=%s", session.PostToken, session.ReturnUrl)
+	http.Redirect(w, r, url, http.StatusSeeOther)
 
 }

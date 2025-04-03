@@ -8,56 +8,107 @@ package db
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const insertPost = `-- name: InsertPost :exec
-INSERT INTO posts (post_id, user_id, access_token, refresh_token, expires_in)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (post_id) DO UPDATE
-SET 
-    access_token = EXCLUDED.access_token,
-    refresh_token = EXCLUDED.refresh_token,
-    expires_in = EXCLUDED.expires_in,
-    updated_at=CURRENT_TIMESTAMP
-WHERE now() > posts.expires_in
+const getPost = `-- name: GetPost :one
+SELECT post_id, latitude, longitude, created_at, updated_at, title
+FROM posts
+WHERE post_id = $1
+`
+
+func (q *Queries) GetPost(ctx context.Context, postID string) (Post, error) {
+	row := q.db.QueryRow(ctx, getPost, postID)
+	var i Post
+	err := row.Scan(
+		&i.PostID,
+		&i.Latitude,
+		&i.Longitude,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Title,
+	)
+	return i, err
+}
+
+const insertPost = `-- name: InsertPost :execresult
+INSERT INTO posts (post_id, latitude, longitude,title)
+VALUES ($1, $2, $3,$4)
+ON CONFLICT (post_id) DO NOTHING
 `
 
 type InsertPostParams struct {
+	PostID    string      `db:"post_id" json:"post_id"`
+	Latitude  float64     `db:"latitude" json:"latitude"`
+	Longitude float64     `db:"longitude" json:"longitude"`
+	Title     pgtype.Text `db:"title" json:"title"`
+}
+
+func (q *Queries) InsertPost(ctx context.Context, arg InsertPostParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, insertPost,
+		arg.PostID,
+		arg.Latitude,
+		arg.Longitude,
+		arg.Title,
+	)
+}
+
+const insertToken = `-- name: InsertToken :execresult
+INSERT INTO tokens (post_id, user_id, access_token, refresh_token, expires_at)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (post_id, user_id) DO UPDATE
+SET
+    access_token = EXCLUDED.access_token,
+    refresh_token = EXCLUDED.refresh_token,
+    expires_at= EXCLUDED.expires_at
+WHERE now() > tokens.expires_at
+`
+
+type InsertTokenParams struct {
 	PostID       string           `db:"post_id" json:"post_id"`
 	UserID       string           `db:"user_id" json:"user_id"`
 	AccessToken  string           `db:"access_token" json:"access_token"`
 	RefreshToken string           `db:"refresh_token" json:"refresh_token"`
-	ExpiresIn    pgtype.Timestamp `db:"expires_in" json:"expires_in"`
+	ExpiresAt    pgtype.Timestamp `db:"expires_at" json:"expires_at"`
 }
 
-func (q *Queries) InsertPost(ctx context.Context, arg InsertPostParams) error {
-	_, err := q.db.Exec(ctx, insertPost,
+func (q *Queries) InsertToken(ctx context.Context, arg InsertTokenParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, insertToken,
 		arg.PostID,
 		arg.UserID,
 		arg.AccessToken,
 		arg.RefreshToken,
-		arg.ExpiresIn,
+		arg.ExpiresAt,
 	)
-	return err
 }
 
-const updatePostCoordinates = `-- name: UpdatePostCoordinates :exec
+const updatePostCoordinates = `-- name: UpdatePostCoordinates :execresult
+
+
 UPDATE posts
 SET 
     latitude = $1,
-    longitude = $2,
-    coordinates_set = TRUE
+    longitude = $2
 WHERE post_id = $3
 `
 
 type UpdatePostCoordinatesParams struct {
-	Latitude  interface{} `db:"latitude" json:"latitude"`
-	Longitude interface{} `db:"longitude" json:"longitude"`
-	PostID    string      `db:"post_id" json:"post_id"`
+	Latitude  float64 `db:"latitude" json:"latitude"`
+	Longitude float64 `db:"longitude" json:"longitude"`
+	PostID    string  `db:"post_id" json:"post_id"`
 }
 
-func (q *Queries) UpdatePostCoordinates(ctx context.Context, arg UpdatePostCoordinatesParams) error {
-	_, err := q.db.Exec(ctx, updatePostCoordinates, arg.Latitude, arg.Longitude, arg.PostID)
-	return err
+// SET
+//
+//	access_token = EXCLUDED.access_token,
+//	refresh_token = EXCLUDED.refresh_token,
+//	expires_in = EXCLUDED.expires_in,
+//	latitude = EXCLUDED.latitude,
+//	longitude = EXCLUDED.longitude,
+//	updated_at=CURRENT_TIMESTAMP
+//
+// WHERE now() > posts.expires_in;
+func (q *Queries) UpdatePostCoordinates(ctx context.Context, arg UpdatePostCoordinatesParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, updatePostCoordinates, arg.Latitude, arg.Longitude, arg.PostID)
 }

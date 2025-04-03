@@ -7,15 +7,16 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-const insertUser = `-- name: InsertUser :exec
+const insertUser = `-- name: InsertUser :execresult
 INSERT INTO users (id)
 VALUES ($1)
 ON CONFLICT (id) DO NOTHING
 `
 
-func (q *Queries) InsertUser(ctx context.Context, id string) error {
-	_, err := q.db.Exec(ctx, insertUser, id)
-	return err
+func (q *Queries) InsertUser(ctx context.Context, id string) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, insertUser, id)
 }

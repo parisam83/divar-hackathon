@@ -7,5 +7,7 @@ CREATE TABLE poi (
     type poi_type NOT NULL, -- 'subway', 'hospital', 'mall' 
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
-    created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (name, type)
 );
+

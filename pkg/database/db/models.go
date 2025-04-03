@@ -58,7 +58,16 @@ type Poi struct {
 	ID        int32            `db:"id" json:"id"`
 	Name      string           `db:"name" json:"name"`
 	Type      PoiType          `db:"type" json:"type"`
-	Latitude  interface{}      `db:"latitude" json:"latitude"`
-	Longitude interface{}      `db:"longitude" json:"longitude"`
+	Latitude  float64          `db:"latitude" json:"latitude"`
+	Longitude float64          `db:"longitude" json:"longitude"`
 	CreatedAt pgtype.Timestamp `db:"created_at" json:"created_at"`
+}
+
+type Post struct {
+	PostID    string           `db:"post_id" json:"post_id"`
+	Latitude  float64          `db:"latitude" json:"latitude"`
+	Longitude float64          `db:"longitude" json:"longitude"`
+	CreatedAt pgtype.Timestamp `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamp `db:"updated_at" json:"updated_at"`
+	Title     pgtype.Text      `db:"title" json:"title"`
 }

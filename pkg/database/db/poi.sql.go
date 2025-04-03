@@ -17,10 +17,10 @@ RETURNING id, name, type, latitude, longitude, created_at
 `
 
 type GetOrCreatePoiParams struct {
-	Name      string      `db:"name" json:"name"`
-	Type      PoiType     `db:"type" json:"type"`
-	Latitude  interface{} `db:"latitude" json:"latitude"`
-	Longitude interface{} `db:"longitude" json:"longitude"`
+	Name      string  `db:"name" json:"name"`
+	Type      PoiType `db:"type" json:"type"`
+	Latitude  float64 `db:"latitude" json:"latitude"`
+	Longitude float64 `db:"longitude" json:"longitude"`
 }
 
 func (q *Queries) GetOrCreatePoi(ctx context.Context, arg GetOrCreatePoiParams) (Poi, error) {
@@ -40,4 +40,61 @@ func (q *Queries) GetOrCreatePoi(ctx context.Context, arg GetOrCreatePoiParams) 
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getToSubwayInfo = `-- name: GetToSubwayInfo :one
+SELECT 
+    p.name AS station_name,
+    tm.distance,
+    tm.duration
+FROM travel_metrics tm
+JOIN poi p ON p.id = tm.destination_id
+JOIN posts pt ON pt.post_id = tm.origin_id
+WHERE 
+    pt.latitude = $1 AND 
+    pt.longitude = $2 AND
+    p.type = 'subway'
+LIMIT 1
+`
+
+type GetToSubwayInfoParams struct {
+	Latitude  float64 `db:"latitude" json:"latitude"`
+	Longitude float64 `db:"longitude" json:"longitude"`
+}
+
+type GetToSubwayInfoRow struct {
+	StationName string `db:"station_name" json:"station_name"`
+	Distance    int32  `db:"distance" json:"distance"`
+	Duration    int32  `db:"duration" json:"duration"`
+}
+
+// Get the nearest subway station to a given lat,lng (There is an issue, many posts can have the same lat,lng)
+func (q *Queries) GetToSubwayInfo(ctx context.Context, arg GetToSubwayInfoParams) (GetToSubwayInfoRow, error) {
+	row := q.db.QueryRow(ctx, getToSubwayInfo, arg.Latitude, arg.Longitude)
+	var i GetToSubwayInfoRow
+	err := row.Scan(&i.StationName, &i.Distance, &i.Duration)
+	return i, err
+}
+
+const upsertSubwayStation = `-- name: UpsertSubwayStation :one
+INSERT INTO poi (name, type, latitude, longitude)
+VALUES ($1, 'subway', $2, $3)
+ON CONFLICT (name, type) 
+DO UPDATE SET 
+    latitude = EXCLUDED.latitude,
+    longitude = EXCLUDED.longitude
+RETURNING id
+`
+
+type UpsertSubwayStationParams struct {
+	Name      string  `db:"name" json:"name"`
+	Latitude  float64 `db:"latitude" json:"latitude"`
+	Longitude float64 `db:"longitude" json:"longitude"`
+}
+
+func (q *Queries) UpsertSubwayStation(ctx context.Context, arg UpsertSubwayStationParams) (int32, error) {
+	row := q.db.QueryRow(ctx, upsertSubwayStation, arg.Name, arg.Latitude, arg.Longitude)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
