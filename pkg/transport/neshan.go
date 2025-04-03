@@ -109,7 +109,7 @@ func (n *Neshan) GetSearchResult(startLat, startLong float64) ([]Items, error) {
 	}
 
 	if len(searchResult.Items) == 0 {
-		return nil, fmt.Errorf("No station found")
+		return nil, fmt.Errorf("no station found")
 	}
 
 	var nearbyStations []Items
@@ -120,7 +120,7 @@ func (n *Neshan) GetSearchResult(startLat, startLong float64) ([]Items, error) {
 	}
 
 	if len(nearbyStations) == 0 {
-		return nil, fmt.Errorf("No station found within 4 km radius")
+		return nil, fmt.Errorf("no station found within 4 km radius")
 	}
 
 	return nearbyStations, nil
@@ -143,7 +143,7 @@ func (n *Neshan) GetDirectionResult(origin, destination string) (DirectionResult
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return DirectionResult{}, fmt.Errorf("Error: %s", resp.Status)
+		return DirectionResult{}, fmt.Errorf("error: %s", resp.Status)
 	}
 
 	var directionResult DirectionResult
@@ -162,6 +162,7 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 	return R * c
 }
+
 func PersianToEnglishNumerals(input string) string {
 	replacements := map[rune]rune{
 		'۰': '0',
@@ -175,7 +176,6 @@ func PersianToEnglishNumerals(input string) string {
 		'۸': '8',
 		'۹': '9',
 	}
-
 	result := []rune(input)
 	for i, char := range result {
 		if replacement, found := replacements[char]; found {
@@ -190,7 +190,6 @@ func convertToMeters(distance, unit string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	switch unit {
 	case "متر":
 		return fmt.Sprintf("%.0f", value), nil
