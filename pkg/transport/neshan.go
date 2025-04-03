@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 )
@@ -161,6 +162,44 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 	return R * c
 }
+func PersianToEnglishNumerals(input string) string {
+	replacements := map[rune]rune{
+		'۰': '0',
+		'۱': '1',
+		'۲': '2',
+		'۳': '3',
+		'۴': '4',
+		'۵': '5',
+		'۶': '6',
+		'۷': '7',
+		'۸': '8',
+		'۹': '9',
+	}
+
+	result := []rune(input)
+	for i, char := range result {
+		if replacement, found := replacements[char]; found {
+			result[i] = replacement
+		}
+	}
+	return string(result)
+}
+
+func convertToMeters(distance, unit string) (string, error) {
+	value, err := strconv.ParseFloat(distance, 64)
+	if err != nil {
+		return "", err
+	}
+
+	switch unit {
+	case "متر":
+		return fmt.Sprintf("%.0f", value), nil
+	case "کیلومتر":
+		return fmt.Sprintf("%.0f", value*1000), nil
+	default:
+		return "", fmt.Errorf("unknown unit: %s", unit)
+	}
+}
 
 func (n *Neshan) GetSubwayStation(startLatstr, startLongstr string) (*StationResponse, error) {
 	if startLatstr == "" || startLongstr == "" {
@@ -192,8 +231,16 @@ func (n *Neshan) GetSubwayStation(startLatstr, startLongstr string) (*StationRes
 		return nil, err
 	}
 
-	totalDuration := directionResult.Route[0].Legs[0].Duration.Text
-	totalDistance := directionResult.Route[0].Legs[0].Distance.Text
+	totalDuration := PersianToEnglishNumerals(strings.Split(directionResult.Route[0].Legs[0].Duration.Text, " ")[0])
+
+	distanceParts := strings.Split(directionResult.Route[0].Legs[0].Distance.Text, " ")
+	distanceValue := PersianToEnglishNumerals(distanceParts[0])
+	distanceUnit := distanceParts[1]
+
+	totalDistance, err := convertToMeters(distanceValue, distanceUnit)
+	if err != nil {
+		return nil, fmt.Errorf("error converting distance: %v", err)
+	}
 
 	response := &StationResponse{
 		ClosestStation: closest.Title,

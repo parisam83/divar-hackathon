@@ -105,6 +105,7 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 	}
 
 	if resp.StatusCode != 200 {
+		log.Println(resp.StatusCode)
 		log.Fatal("Status code is not 200")
 	}
 
@@ -126,7 +127,8 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 func (s *Snapp) SetHeader(req *http.Request) {
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Referer", "https://app.snapp.taxi/pre-ride?utm_source=landing&utm_medium=request-button&utm_campaign=taxi&_gl=1*6bvi14*_gcl_au*MTEzNjQxNTUwMy4xNzQwNTc4NzI0")
+	req.Header.Set("Referer", "https://app.snapp.taxi/pre-ride?rideFrom={%22options%22:{%22serviceType%22:1,%22recommender%22:%22cab%22}}")
+
 	req.Header.Set("Origin", "https://app.snapp.taxi")
 	req.Header.Set("Authorization", "Bearer "+s.accessToken)
 	req.Header.Set("Cookie", "cookiesession1="+s.cookiesession1+
