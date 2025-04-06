@@ -12,8 +12,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkPostOwnership = `-- name: CheckPostOwnership :one
+SELECT 
+    CASE WHEN owner_id = $1 THEN true ELSE false END as is_owner
+FROM posts
+WHERE post_id = $2
+`
+
+type CheckPostOwnershipParams struct {
+	OwnerID pgtype.Text `db:"owner_id" json:"owner_id"`
+	PostID  string      `db:"post_id" json:"post_id"`
+}
+
+func (q *Queries) CheckPostOwnership(ctx context.Context, arg CheckPostOwnershipParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkPostOwnership, arg.OwnerID, arg.PostID)
+	var is_owner bool
+	err := row.Scan(&is_owner)
+	return is_owner, err
+}
+
 const getPost = `-- name: GetPost :one
-SELECT post_id, latitude, longitude, title, created_at, updated_at
+SELECT post_id, owner_id, latitude, longitude, title, created_at, updated_at
 FROM posts
 WHERE post_id = $1
 `
@@ -23,6 +42,27 @@ func (q *Queries) GetPost(ctx context.Context, postID string) (Post, error) {
 	var i Post
 	err := row.Scan(
 		&i.PostID,
+		&i.OwnerID,
+		&i.Latitude,
+		&i.Longitude,
+		&i.Title,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getPostDetails = `-- name: GetPostDetails :one
+SELECT post_id, owner_id, latitude, longitude, title, created_at, updated_at FROM posts
+WHERE post_id = $1
+`
+
+func (q *Queries) GetPostDetails(ctx context.Context, postID string) (Post, error) {
+	row := q.db.QueryRow(ctx, getPostDetails, postID)
+	var i Post
+	err := row.Scan(
+		&i.PostID,
+		&i.OwnerID,
 		&i.Latitude,
 		&i.Longitude,
 		&i.Title,
@@ -33,12 +73,23 @@ func (q *Queries) GetPost(ctx context.Context, postID string) (Post, error) {
 }
 
 const insertPost = `-- name: InsertPost :execresult
-INSERT INTO posts (post_id, latitude, longitude,title)
-VALUES ($1, $2, $3,$4)
-ON CONFLICT (post_id) DO UPDATE
-SET 
+INSERT INTO posts (
+    post_id, 
+    latitude, 
+    longitude, 
+    title, 
+    owner_id
+) 
+VALUES (
+    $1, $2, $3, $4, $5
+)
+ON CONFLICT (post_id) 
+DO UPDATE SET
     latitude = EXCLUDED.latitude,
-    longitude = EXCLUDED.longitude
+    longitude = EXCLUDED.longitude,
+    title = EXCLUDED.title,
+    owner_id = COALESCE(posts.owner_id, EXCLUDED.owner_id)
+RETURNING post_id, owner_id, latitude, longitude, title, created_at, updated_at
 `
 
 type InsertPostParams struct {
@@ -46,6 +97,7 @@ type InsertPostParams struct {
 	Latitude  float64     `db:"latitude" json:"latitude"`
 	Longitude float64     `db:"longitude" json:"longitude"`
 	Title     pgtype.Text `db:"title" json:"title"`
+	OwnerID   pgtype.Text `db:"owner_id" json:"owner_id"`
 }
 
 func (q *Queries) InsertPost(ctx context.Context, arg InsertPostParams) (pgconn.CommandTag, error) {
@@ -54,11 +106,11 @@ func (q *Queries) InsertPost(ctx context.Context, arg InsertPostParams) (pgconn.
 		arg.Latitude,
 		arg.Longitude,
 		arg.Title,
+		arg.OwnerID,
 	)
 }
 
 const updatePostCoordinates = `-- name: UpdatePostCoordinates :execresult
-
 
 UPDATE posts
 SET 
@@ -73,12 +125,29 @@ type UpdatePostCoordinatesParams struct {
 	PostID    string  `db:"post_id" json:"post_id"`
 }
 
-//	access_token = EXCLUDED.access_token,
-//	refresh_token = EXCLUDED.refresh_token,
-//	expires_in = EXCLUDED.expires_in,
-//	updated_at=CURRENT_TIMESTAMP
+// -- name: InsertPost :execresult
+// INSERT INTO posts (post_id, latitude, longitude,title)
+// VALUES ($1, $2, $3,$4)
+// ON CONFLICT (post_id) DO UPDATE
+// SET
 //
-// WHERE now() > posts.expires_in;
+//	latitude = EXCLUDED.latitude,
+//	longitude = EXCLUDED.longitude;
 func (q *Queries) UpdatePostCoordinates(ctx context.Context, arg UpdatePostCoordinatesParams) (pgconn.CommandTag, error) {
 	return q.db.Exec(ctx, updatePostCoordinates, arg.Latitude, arg.Longitude, arg.PostID)
+}
+
+const updatePostOwner = `-- name: UpdatePostOwner :execresult
+UPDATE posts
+SET owner_id = $1
+WHERE post_id = $2 AND (owner_id IS NULL OR owner_id = $1)
+`
+
+type UpdatePostOwnerParams struct {
+	OwnerID pgtype.Text `db:"owner_id" json:"owner_id"`
+	PostID  string      `db:"post_id" json:"post_id"`
+}
+
+func (q *Queries) UpdatePostOwner(ctx context.Context, arg UpdatePostOwnerParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, updatePostOwner, arg.OwnerID, arg.PostID)
 }

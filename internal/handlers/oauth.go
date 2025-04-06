@@ -47,11 +47,21 @@ func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, ken
 	}
 }
 
-func (h *oAuthHandler) buildScopes(postToken string) []string {
-	oauthScopes := []Scope{
-		{resourceType: POST_ADDON_CREATE, resourceID: postToken},
-		{resourceType: USER_ID},
-		{resourceType: OFFLINE_ACCESS},
+func (h *oAuthHandler) buildScopes(postToken string, isBuyer bool) []string {
+	var oauthScopes []Scope
+
+	if isBuyer {
+		// For buyers, only include USER_ID scope
+		oauthScopes = []Scope{
+			{resourceType: USER_ID},
+		}
+	} else {
+		// For non-buyers, include all scopes
+		oauthScopes = []Scope{
+			{resourceType: POST_ADDON_CREATE, resourceID: postToken},
+			{resourceType: USER_ID},
+			{resourceType: OFFLINE_ACCESS},
+		}
 	}
 
 	var scopes []string
@@ -65,19 +75,38 @@ func (h *oAuthHandler) buildScopes(postToken string) []string {
 	return scopes
 }
 
+// func (h *oAuthHandler) buildScopes(postToken string) []string {
+// 	oauthScopes := []Scope{
+// 		{resourceType: POST_ADDON_CREATE, resourceID: postToken},
+// 		{resourceType: USER_ID},
+// 		{resourceType: OFFLINE_ACCESS},
+// 	}
+
+// 	var scopes []string
+// 	for _, scope := range oauthScopes {
+// 		if scope.resourceID != "" {
+// 			scopes = append(scopes, fmt.Sprintf("%s.%s", scope.resourceType, scope.resourceID))
+// 		} else {
+// 			scopes = append(scopes, string(scope.resourceType))
+// 		}
+// 	}
+// 	return scopes
+// }
+
 func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	log.Println("AddonOauth called")
 
 	postToken := r.URL.Query().Get("post_token")
 	return_url := r.URL.Query().Get("return_url")
-	log.Println("return_url: ", return_url)
+
 	isBuyer := return_url == ""
+
 	if postToken == "" {
 		http.Error(w, "post_token is required", http.StatusBadRequest)
 		return
 	}
 	session, err := h.store.GetExistingSession(w, r)
-	if err != nil || session.PostToken != postToken {
+	if err != nil || session.PostToken != postToken || session.IsBuyer != isBuyer {
 		log.Println("new person. new post!")
 		session, err = h.store.CreateNewSession(w, r, postToken, return_url, isBuyer)
 		if err != nil {
@@ -86,7 +115,7 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// creating scopes
-	scopes := h.buildScopes(postToken)
+	scopes := h.buildScopes(postToken, isBuyer)
 	redirect_url := h.oauthService.GenerateAuthURL(scopes, session.State)
 	http.Redirect(w, r, redirect_url, http.StatusFound)
 
@@ -142,26 +171,39 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	properyDetail, err := h.kenarService.GetPropertyDetail(session.PostToken)
+	properyDetail, err := h.kenarService.GetPropertyDetail(r.Context(), session.PostToken)
 	if err != nil {
 		http.Error(w, "Failed to get coordinates: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = h.oauthService.RegisterAuthData(r.Context(), &services.Transaction{
+	// Check if the user is the owner of this post
+	_, err = h.oauthService.IsUserPostOwner(r.Context(), userDetail.UserId, session.PostToken)
+	if err != nil {
+		log.Printf("Error checking post ownership: %v", err)
+		// Continue even if we can't check ownership
+	}
+
+	transactionData := &services.Transaction{
 		PropertyDetail: properyDetail,
 		UserDetail:     userDetail,
-		TokenInfo: &services.TokenInfo{
+		IsBuyer:        session.IsBuyer,
+	}
+
+	// Only include token info for  (sellers)
+	if !session.IsBuyer {
+		transactionData.TokenInfo = &services.TokenInfo{
 			RefreshToken: token.RefreshToken,
 			AccessToken:  token.AccessToken,
 			ExpiresIn:    token.Expiry,
-		},
-	})
+		}
+	}
+
+	err = h.oauthService.RegisterAuthData(r.Context(), transactionData)
 	if err != nil {
 		http.Error(w, "Failed to register auth data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println("HERE I AMMMMMMMMMMMMM")
 	jwtToken, err := h.jwt.CreateJwtToken(userDetail.UserId)
 	if err != nil {
 		http.Error(w, "Error creating jwt token", http.StatusInternalServerError)
@@ -174,9 +216,13 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   86400,
 	})
-	log.Println("THe problem sets here\n")
-
-	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/api/main?post_token=%s&return_url=%s", session.PostToken, session.ReturnUrl)
+	var url string
+	if session.IsBuyer {
+		url = fmt.Sprintf("/api/buyer/landing?post_token=%s&return_url=%s", session.PostToken, "https://open-platform-redirect.divar.ir/completion")
+	} else {
+		url = fmt.Sprintf("/api/seller/landing?post_token=%s&return_url=%s", session.PostToken, session.ReturnUrl)
+	}
+	// url := fmt.Sprintf("/api/main?post_token=%s&return_url=%s", session.PostToken, session.ReturnUrl)
 	http.Redirect(w, r, url, http.StatusSeeOther)
 
 }

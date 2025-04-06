@@ -11,20 +11,27 @@ import (
 )
 
 type Querier interface {
+	CheckPostOwnership(ctx context.Context, arg CheckPostOwnershipParams) (bool, error)
+	CheckUserPurchase(ctx context.Context, arg CheckUserPurchaseParams) (bool, error)
 	Get3NearestPoiFromEachType(ctx context.Context, arg Get3NearestPoiFromEachTypeParams) ([]Get3NearestPoiFromEachTypeRow, error)
 	GetAccessTokenByUserIdPostId(ctx context.Context, arg GetAccessTokenByUserIdPostIdParams) (GetAccessTokenByUserIdPostIdRow, error)
 	GetOrCreatePoi(ctx context.Context, arg GetOrCreatePoiParams) (Poi, error)
 	GetPost(ctx context.Context, postID string) (Post, error)
+	GetPostDetails(ctx context.Context, postID string) (Post, error)
 	InsertPost(ctx context.Context, arg InsertPostParams) (pgconn.CommandTag, error)
+	InsertPostPurchase(ctx context.Context, arg InsertPostPurchaseParams) (pgconn.CommandTag, error)
 	InsertToken(ctx context.Context, arg InsertTokenParams) (pgconn.CommandTag, error)
 	InsertUser(ctx context.Context, id string) (pgconn.CommandTag, error)
 	SaveTravelMetrics(ctx context.Context, arg SaveTravelMetricsParams) (pgconn.CommandTag, error)
-	//     access_token = EXCLUDED.access_token,
-	//     refresh_token = EXCLUDED.refresh_token,
-	//     expires_in = EXCLUDED.expires_in,
-	//     updated_at=CURRENT_TIMESTAMP
-	// WHERE now() > posts.expires_in;
+	// -- name: InsertPost :execresult
+	// INSERT INTO posts (post_id, latitude, longitude,title)
+	// VALUES ($1, $2, $3,$4)
+	// ON CONFLICT (post_id) DO UPDATE
+	// SET
+	//     latitude = EXCLUDED.latitude,
+	//     longitude = EXCLUDED.longitude;
 	UpdatePostCoordinates(ctx context.Context, arg UpdatePostCoordinatesParams) (pgconn.CommandTag, error)
+	UpdatePostOwner(ctx context.Context, arg UpdatePostOwnerParams) (pgconn.CommandTag, error)
 	UpsertPOI(ctx context.Context, arg UpsertPOIParams) (int32, error)
 }
 

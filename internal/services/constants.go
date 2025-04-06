@@ -47,6 +47,7 @@ type TokenInfo struct {
 }
 
 type Transaction struct {
+	IsBuyer        bool
 	PropertyDetail *propertyInfo
 	UserDetail     *userInfo
 	TokenInfo      *TokenInfo

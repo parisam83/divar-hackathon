@@ -13,7 +13,7 @@ import (
 )
 
 const getAccessTokenByUserIdPostId = `-- name: GetAccessTokenByUserIdPostId :one
-SELECT t.id, t.post_id, user_id, access_token, refresh_token, expires_at, t.created_at, t.updated_at, p.post_id, latitude, longitude, title, p.created_at, p.updated_at, u.id, u.created_at, u.updated_at FROM tokens t
+SELECT t.id, t.post_id, user_id, access_token, refresh_token, expires_at, t.created_at, t.updated_at, p.post_id, owner_id, latitude, longitude, title, p.created_at, p.updated_at, u.id, u.created_at, u.updated_at FROM tokens t
 JOIN posts p ON p.post_id=t.post_id
 JOIN users u ON u.id=t.user_id
 WHERE  u.id = $1 AND 
@@ -36,6 +36,7 @@ type GetAccessTokenByUserIdPostIdRow struct {
 	CreatedAt    pgtype.Timestamp   `db:"created_at" json:"created_at"`
 	UpdatedAt    pgtype.Timestamp   `db:"updated_at" json:"updated_at"`
 	PostID_2     string             `db:"post_id_2" json:"post_id_2"`
+	OwnerID      pgtype.Text        `db:"owner_id" json:"owner_id"`
 	Latitude     float64            `db:"latitude" json:"latitude"`
 	Longitude    float64            `db:"longitude" json:"longitude"`
 	Title        pgtype.Text        `db:"title" json:"title"`
@@ -59,6 +60,7 @@ func (q *Queries) GetAccessTokenByUserIdPostId(ctx context.Context, arg GetAcces
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PostID_2,
+		&i.OwnerID,
 		&i.Latitude,
 		&i.Longitude,
 		&i.Title,

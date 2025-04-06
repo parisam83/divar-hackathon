@@ -57,7 +57,9 @@ func (t *TransportService) GetPrice(ctx context.Context, originLat, originLong, 
 	return response, nil
 }
 
-func (s *TransportService) FindNearestStation(ctx context.Context, postToken, originLat, originLong string) (*transport.NearbyPOIsResponse, error) {
+func (s *TransportService) FindNearestStation(ctx context.Context, userId, postToken, originLat, originLong string) (*transport.NearbyPOIsResponse, error) {
+
+	//check if this user is a valid peerson using post purchase, tokens
 
 	// Convert string coordinates to float64
 	lat, err := strconv.ParseFloat(originLat, 64)

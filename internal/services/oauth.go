@@ -36,11 +36,14 @@ func NewOAuthService(appConfig configs.KenarConfig, queries *db.Queries, db *pgx
 		db:        db,
 	}
 }
+
 func (t *Transaction) Validate() error {
 	log.Println("Validating transaction data")
-	if t.PropertyDetail == nil || t.UserDetail == nil || t.TokenInfo == nil {
+	if t.PropertyDetail == nil || t.UserDetail == nil {
 		return fmt.Errorf("missing required transaction components")
 	}
+
+	// Basic validation for all transactions
 	switch {
 	case t.UserDetail.UserId == "":
 		return fmt.Errorf("invalid user_id: cannot be empty")
@@ -50,22 +53,34 @@ func (t *Transaction) Validate() error {
 		return fmt.Errorf("invalid title: cannot be empty")
 	case t.PropertyDetail.Latitude == 0 || t.PropertyDetail.Longitude == 0:
 		return fmt.Errorf("invalid coordinates: lat=%f, long=%f", t.PropertyDetail.Latitude, t.PropertyDetail.Longitude)
-	case t.TokenInfo.AccessToken == "":
-		return fmt.Errorf("invalid access_token: cannot be empty")
-	case t.TokenInfo.RefreshToken == "":
-		return fmt.Errorf("invalid refresh_token: cannot be empty")
-	case t.TokenInfo.ExpiresIn.IsZero():
-		return fmt.Errorf("invalid expires_in: cannot be zero")
+	}
+
+	// For non-buyers, validate TokenInfo
+	if !t.IsBuyer {
+		if t.TokenInfo == nil {
+			return fmt.Errorf("missing token info for non-buyer transaction")
+		}
+
+		switch {
+		case t.TokenInfo.AccessToken == "":
+			return fmt.Errorf("invalid access_token: cannot be empty")
+		case t.TokenInfo.RefreshToken == "":
+			return fmt.Errorf("invalid refresh_token: cannot be empty")
+		case t.TokenInfo.ExpiresIn.IsZero():
+			return fmt.Errorf("invalid expires_in: cannot be zero")
+		}
 	}
 
 	return nil
 }
+
 func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction) error {
 	log.Println("RegisterAuthData called")
 	err := input.Validate()
 	if err != nil {
 		return fmt.Errorf("invalid transaction data: %w", err)
 	}
+
 	log.Printf("Starting Transaction after OAuth for user id:%s and post_id: %s", input.UserDetail.UserId, input.PropertyDetail.PostID)
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -73,6 +88,8 @@ func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction)
 	}
 	defer tx.Rollback(ctx)
 	qtx := s.queries.WithTx(tx)
+
+	// Insert user
 	result, err := qtx.InsertUser(ctx, input.UserDetail.UserId)
 	if err != nil {
 		return fmt.Errorf("failed to insert user: %w", err)
@@ -83,11 +100,24 @@ func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction)
 		log.Printf("Successfully added user to the database: %+v", input.UserDetail)
 	}
 
+	// Insert post
+
+	ownerID := pgtype.Text{Valid: false} // Default to NULL
+
+	// Set owner_id only if this is not a buyer (i.e., it's a seller)
+	if !input.IsBuyer {
+		ownerID = pgtype.Text{
+			String: input.UserDetail.UserId,
+			Valid:  true,
+		}
+	}
+
 	result, err = qtx.InsertPost(ctx, db.InsertPostParams{
 		PostID:    input.PropertyDetail.PostID,
 		Latitude:  input.PropertyDetail.Latitude,
 		Longitude: input.PropertyDetail.Longitude,
 		Title:     pgtype.Text{String: input.PropertyDetail.Title, Valid: true},
+		OwnerID:   ownerID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to insert post: %w", err)
@@ -98,24 +128,104 @@ func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction)
 		log.Printf("Successfully added post to the database: %+v", input.PropertyDetail)
 	}
 
-	result, err = qtx.InsertToken(ctx, db.InsertTokenParams{
-		PostID:       input.PropertyDetail.PostID,
-		UserID:       input.UserDetail.UserId,
-		AccessToken:  input.TokenInfo.AccessToken,
-		RefreshToken: input.TokenInfo.AccessToken,
-		ExpiresAt:    pgtype.Timestamp{Time: input.TokenInfo.ExpiresIn, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to insert token: %w", err)
+	// Only insert token data for post owners
+	if !input.IsBuyer && input.TokenInfo != nil {
+		result, err = qtx.InsertToken(ctx, db.InsertTokenParams{
+			PostID:       input.PropertyDetail.PostID,
+			UserID:       input.UserDetail.UserId,
+			AccessToken:  input.TokenInfo.AccessToken,
+			RefreshToken: input.TokenInfo.RefreshToken, // Note: You had AccessToken here which is likely a bug
+			ExpiresAt:    pgtype.Timestamp{Time: input.TokenInfo.ExpiresIn, Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to insert token: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			log.Printf("Token already exists: %+v", input.TokenInfo)
+		} else {
+			log.Printf("Successfully added token to the database: %+v", input.TokenInfo)
+		}
 	}
-	if result.RowsAffected() == 0 {
-		log.Printf("Token already exists: %+v", input.TokenInfo)
-	} else {
-		log.Printf("Successfully added token to the database: %+v", input.TokenInfo)
-	}
-	return tx.Commit(ctx)
 
+	// Handle post purchase for buyers
+	//maybe we handle it when the user purchases??
+	// if input.IsBuyer {
+
+	// 	result, err = qtx.InsertPostPurchase(ctx, db.InsertPostPurchaseParams{
+	// 		UserID:    input.UserDetail.UserId,
+	// 		PostToken: input.PropertyDetail.PostID,
+	// 	})
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to record post purchase: %w", err)
+	// 	}
+	// 	if result.RowsAffected() == 0 {
+	// 		log.Printf("Purchase record already exists for user %s and post %s",
+	// 			input.UserDetail.UserId, input.PropertyDetail.PostID)
+	// 	} else {
+	// 		log.Printf("Successfully recorded purchase for user %s and post %s",
+	// 			input.UserDetail.UserId, input.PropertyDetail.PostID)
+	// 	}
+	// }
+
+	return tx.Commit(ctx)
 }
+
+// func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction) error {
+// 	log.Println("RegisterAuthData called")
+// 	err := input.Validate()
+// 	if err != nil {
+// 		return fmt.Errorf("invalid transaction data: %w", err)
+// 	}
+// 	log.Printf("Starting Transaction after OAuth for user id:%s and post_id: %s", input.UserDetail.UserId, input.PropertyDetail.PostID)
+// 	tx, err := s.db.Begin(ctx)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to begin transaction: %w", err)
+// 	}
+// 	defer tx.Rollback(ctx)
+// 	qtx := s.queries.WithTx(tx)
+// 	result, err := qtx.InsertUser(ctx, input.UserDetail.UserId)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to insert user: %w", err)
+// 	}
+// 	if result.RowsAffected() == 0 {
+// 		log.Printf("user already exists: %+v", input.UserDetail)
+// 	} else {
+// 		log.Printf("Successfully added user to the database: %+v", input.UserDetail)
+// 	}
+
+// 	result, err = qtx.InsertPost(ctx, db.InsertPostParams{
+// 		PostID:    input.PropertyDetail.PostID,
+// 		Latitude:  input.PropertyDetail.Latitude,
+// 		Longitude: input.PropertyDetail.Longitude,
+// 		Title:     pgtype.Text{String: input.PropertyDetail.Title, Valid: true},
+// 	})
+// 	if err != nil {
+// 		return fmt.Errorf("failed to insert post: %w", err)
+// 	}
+// 	if result.RowsAffected() == 0 {
+// 		log.Printf("post already exists: %+v", input.PropertyDetail)
+// 	} else {
+// 		log.Printf("Successfully added post to the database: %+v", input.PropertyDetail)
+// 	}
+
+// 	result, err = qtx.InsertToken(ctx, db.InsertTokenParams{
+// 		PostID:       input.PropertyDetail.PostID,
+// 		UserID:       input.UserDetail.UserId,
+// 		AccessToken:  input.TokenInfo.AccessToken,
+// 		RefreshToken: input.TokenInfo.AccessToken,
+// 		ExpiresAt:    pgtype.Timestamp{Time: input.TokenInfo.ExpiresIn, Valid: true},
+// 	})
+// 	if err != nil {
+// 		return fmt.Errorf("failed to insert token: %w", err)
+// 	}
+// 	if result.RowsAffected() == 0 {
+// 		log.Printf("Token already exists: %+v", input.TokenInfo)
+// 	} else {
+// 		log.Printf("Successfully added token to the database: %+v", input.TokenInfo)
+// 	}
+// 	return tx.Commit(ctx)
+
+// }
 
 // func (s *OAuthService) InsertUser(userId string) error {
 // 	err := s.queries.InsertUser(context.Background(), userId)
@@ -150,6 +260,17 @@ func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction)
 // 	return nil
 // }
 
+func (s *OAuthService) IsUserPostOwner(ctx context.Context, userId, postId string) (bool, error) {
+	log.Println("Checking if user is the owner of the post")
+	isOwner, err := s.queries.CheckPostOwnership(ctx, db.CheckPostOwnershipParams{
+		OwnerID: pgtype.Text{String: userId, Valid: true},
+		PostID:  postId,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to get post owner: %w", err)
+	}
+	return isOwner, nil
+}
 func (s *OAuthService) GenerateAuthURL(scopes []string, state string) string {
 	s.oauthConf.Scopes = scopes
 	return s.oauthConf.AuthCodeURL(state, oauth2.AccessTypeOffline)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"html/template"
 	"log"
 	"mime"
 	"net/http"
@@ -58,7 +57,7 @@ func main() {
 
 	kenarService := services.NewKenarService(conf.Kenar.ApiKey, "https://api.divar.ir/v1/open-platform", query)
 	kenarHandler := handlers.NewKenarHandler(sessionStore, kenarService, taxiService)
-
+	pageHandler := handlers.NewPageHandler(sessionStore, kenarService, taxiService)
 	oauthService := services.NewOAuthService(conf.Kenar, query, conPool)
 	oauthHandler := handlers.NewOAuthHandler(sessionStore, oauthService, kenarService, jwtManager)
 	// oauthHandler := handlers.NewOAuthHandler(oauthService)
@@ -71,7 +70,7 @@ func main() {
 	r.HandleFunc("/poi", kenarHandler.Poi)
 	r.HandleFunc("/addon/oauth", oauthHandler.AddonOauth)
 	r.HandleFunc("/api/calculate-fare", kenarHandler.GetPrice)
-	r.HandleFunc("/api/find-amenities", kenarHandler.Poi)
+	r.HandleFunc("/api/find-amenities", jwtManager.JWTMiddlewear(kenarHandler.Poi))
 	r.HandleFunc("/api/add-to-ad", jwtManager.JWTMiddlewear(kenarHandler.AddLocationWidget))
 
 	r.HandleFunc("/api/get-origin", kenarHandler.GetOriginCoordinates).Methods("POST")
@@ -83,8 +82,8 @@ func main() {
 
 	// fileServer := http.FileServer(http.Dir("./web/static"))
 	// r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fileServer))
-	r.HandleFunc("/api/main", handleLanding)
-
+	r.HandleFunc("/api/seller/landing", pageHandler.SellerDashboardHandler).Methods("GET")
+	r.Handle("/api/buyer/landing", jwtManager.JWTMiddlewear(pageHandler.BuyerDashboardHandler)).Methods("GET")
 	htmlFileServer := http.FileServer(http.Dir("./web"))
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", htmlFileServer))
 	r.HandleFunc("/error", utils.RenderErrorPage)
@@ -92,32 +91,4 @@ func main() {
 	port := conf.Server.Port
 	log.Printf("Server started on port %s", port)
 	http.ListenAndServe(":"+port, r)
-}
-
-func handleLanding(w http.ResponseWriter, r *http.Request) {
-	postToken := r.URL.Query().Get("post_token")
-	return_url := r.URL.Query().Get("return_url")
-	log.Println(postToken)
-	log.Println(return_url)
-
-	if postToken == "" || return_url == "" {
-		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
-		return
-	}
-
-	tmp, err := template.ParseFiles("./web/landing.html")
-	if err != nil {
-		http.Error(w, "Template error", http.StatusInternalServerError)
-		return
-	}
-	data := struct {
-		Token        string
-		RedirectLink string
-	}{
-		Token:        postToken,
-		RedirectLink: return_url,
-	}
-
-	tmp.Execute(w, data)
-	return
 }

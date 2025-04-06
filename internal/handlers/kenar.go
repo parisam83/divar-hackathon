@@ -68,6 +68,14 @@ func (k *KenarHandler) GetPrice(w http.ResponseWriter, r *http.Request) {
 
 func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 	log.Println("Kenar called")
+
+	userId, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای احراز هویت", "کاربر شناسایی نشد", "User ID not found in context")
+		return
+	}
+	log.Println("hereeeeeeeeeeeeee")
+	log.Println("userId: ", userId)
 	var req struct {
 		Latitude  float64 `json:"lat"`
 		Longitude float64 `json:"lng"`
@@ -79,21 +87,13 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 		// http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	stationResult, err := k.transportService.FindNearestStation(r.Context(), req.PostToken, strconv.FormatFloat(req.Latitude, 'f', -1, 64), strconv.FormatFloat(req.Longitude, 'f', -1, 64))
+	log.Println("here")
+	stationResult, err := k.transportService.FindNearestStation(r.Context(), userId, req.PostToken, strconv.FormatFloat(req.Latitude, 'f', -1, 64), strconv.FormatFloat(req.Longitude, 'f', -1, 64))
 	if err != nil {
 		http.Error(w, "failed to find nearest station: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	// response := NewPoiResponse(stationResult)
-
-	// response := PoiResponse{
-	// 	Subway: SubwayInfo{
-	// 		Distance: stationResult.TotalDistance,
-	// 		Name:     stationResult.ClosestStation,
-	// 		Duration: stationResult.TotalDuration,
-	// 	},
-	// }
 
 	if err := json.NewEncoder(w).Encode(stationResult); err != nil {
 		http.Error(w, "failed to encode response: "+err.Error(), http.StatusInternalServerError)
@@ -119,7 +119,14 @@ type AddToListingRequest struct {
 
 func (h *KenarHandler) AddLocationWidget(w http.ResponseWriter, r *http.Request) {
 	log.Println("Add location widget")
-	//WE GET THE JWT THING AND USER ID
+
+	userId, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای احراز هویت", "کاربر شناسایی نشد", "User ID not found in context")
+		// http.Error(w, "User ID not found or invalid", http.StatusInternalServerError)
+		return
+	}
+
 	var req AddToListingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Println(err.Error())
@@ -135,12 +142,7 @@ func (h *KenarHandler) AddLocationWidget(w http.ResponseWriter, r *http.Request)
 	}
 
 	// sample userId until we use jwt
-	userId, ok := r.Context().Value("user_id").(string)
-	if !ok {
-		utils.HanleError(w, r, http.StatusInternalServerError, "خطای احراز هویت", "کاربر شناسایی نشد", "User ID not found in context")
-		// http.Error(w, "User ID not found or invalid", http.StatusInternalServerError)
-		return
-	}
+
 	log.Println("finallyyyyyyyy")
 	log.Println(userId)
 
@@ -169,7 +171,7 @@ func (k *KenarHandler) GetOriginCoordinates(w http.ResponseWriter, r *http.Reque
 		// http.Error(w, "failed to decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	post, err := k.kenarService.GetPropertyDetail(req.PostToken)
+	post, err := k.kenarService.GetPropertyDetail(r.Context(), req.PostToken)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			utils.HanleError(w, r, http.StatusNotFound, "یافت نشد", "آگهی موردنظر یافت نشد", err.Error())

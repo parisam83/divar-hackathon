@@ -186,8 +186,8 @@ func (k *KenarService) PostLocationWidget(ctx context.Context, userId string, po
 	return nil
 }
 
-func (k *KenarService) GetPropertyDetail(postToken string) (*propertyInfo, error) {
-	post, err := k.queries.GetPost(context.Background(), postToken)
+func (k *KenarService) GetPropertyDetail(ctx context.Context, postToken string) (*propertyInfo, error) {
+	post, err := k.queries.GetPost(ctx, postToken)
 	if err == nil {
 		log.Printf("Post %s found in database: location (lat: %f, lng: %f)", postToken, post.Latitude, post.Longitude)
 		return &propertyInfo{
@@ -200,16 +200,16 @@ func (k *KenarService) GetPropertyDetail(postToken string) (*propertyInfo, error
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query property detail from database: %w", err)
 	}
-	propertyInfo, err := k.fetchPropertyInfoFromDivar(postToken)
+	propertyInfo, err := k.fetchPropertyInfoFromDivar(ctx, postToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch property info: %w", err)
 	}
 	return propertyInfo, nil
 }
 
-func (k *KenarService) fetchPropertyInfoFromDivar(postToken string) (*propertyInfo, error) {
+func (k *KenarService) fetchPropertyInfoFromDivar(ctx context.Context, postToken string) (*propertyInfo, error) {
 
-	resp, err := k.client.R().Get(GetPostUrl + postToken)
+	resp, err := k.client.R().SetContext(ctx).Get(GetPostUrl + postToken)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch property request %w", err)

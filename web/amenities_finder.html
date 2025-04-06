@@ -572,8 +572,18 @@ html[dir="rtl"] .status-message.info {
                         lng: lng
                     })
                 });
+                if (response.redirected) {
+                    console.log("Redirect detected to:", response.url);
+                    window.location.href = response.url;
+                    return { ok: false };
+                }
                 
                 if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    if (errorData.redirect) {
+                        window.location.href = errorData.redirect;
+                        return { ok: false };
+                    }
                     throw new Error('خطا در جستجوی امکانات نزدیک');
                 }
                 
@@ -803,8 +813,8 @@ html[dir="rtl"] .status-message.info {
                 .catch(error => {
                     console.error("Error finding amenities:", error);
                     updateTopStatus(`خطا: ${error.message || 'خطا در جستجوی امکانات نزدیک'}`, 'error');
-                    findBtn.disabled = false; // Re-enable on error
-                });
+                    findBtn.disabled = false; 
+                    setTimeout(() => {}, 1000);});
         }
 
         function handleApproval() {
