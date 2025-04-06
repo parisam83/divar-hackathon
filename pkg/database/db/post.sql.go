@@ -13,7 +13,7 @@ import (
 )
 
 const getPost = `-- name: GetPost :one
-SELECT post_id, latitude, longitude, created_at, updated_at, title
+SELECT post_id, latitude, longitude, title, created_at, updated_at
 FROM posts
 WHERE post_id = $1
 `
@@ -25,9 +25,9 @@ func (q *Queries) GetPost(ctx context.Context, postID string) (Post, error) {
 		&i.PostID,
 		&i.Latitude,
 		&i.Longitude,
+		&i.Title,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Title,
 	)
 	return i, err
 }
@@ -35,7 +35,10 @@ func (q *Queries) GetPost(ctx context.Context, postID string) (Post, error) {
 const insertPost = `-- name: InsertPost :execresult
 INSERT INTO posts (post_id, latitude, longitude,title)
 VALUES ($1, $2, $3,$4)
-ON CONFLICT (post_id) DO NOTHING
+ON CONFLICT (post_id) DO UPDATE
+SET 
+    latitude = EXCLUDED.latitude,
+    longitude = EXCLUDED.longitude
 `
 
 type InsertPostParams struct {
@@ -51,35 +54,6 @@ func (q *Queries) InsertPost(ctx context.Context, arg InsertPostParams) (pgconn.
 		arg.Latitude,
 		arg.Longitude,
 		arg.Title,
-	)
-}
-
-const insertToken = `-- name: InsertToken :execresult
-INSERT INTO tokens (post_id, user_id, access_token, refresh_token, expires_at)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (post_id, user_id) DO UPDATE
-SET
-    access_token = EXCLUDED.access_token,
-    refresh_token = EXCLUDED.refresh_token,
-    expires_at= EXCLUDED.expires_at
-WHERE now() > tokens.expires_at
-`
-
-type InsertTokenParams struct {
-	PostID       string           `db:"post_id" json:"post_id"`
-	UserID       string           `db:"user_id" json:"user_id"`
-	AccessToken  string           `db:"access_token" json:"access_token"`
-	RefreshToken string           `db:"refresh_token" json:"refresh_token"`
-	ExpiresAt    pgtype.Timestamp `db:"expires_at" json:"expires_at"`
-}
-
-func (q *Queries) InsertToken(ctx context.Context, arg InsertTokenParams) (pgconn.CommandTag, error) {
-	return q.db.Exec(ctx, insertToken,
-		arg.PostID,
-		arg.UserID,
-		arg.AccessToken,
-		arg.RefreshToken,
-		arg.ExpiresAt,
 	)
 }
 
@@ -99,13 +73,9 @@ type UpdatePostCoordinatesParams struct {
 	PostID    string  `db:"post_id" json:"post_id"`
 }
 
-// SET
-//
 //	access_token = EXCLUDED.access_token,
 //	refresh_token = EXCLUDED.refresh_token,
 //	expires_in = EXCLUDED.expires_in,
-//	latitude = EXCLUDED.latitude,
-//	longitude = EXCLUDED.longitude,
 //	updated_at=CURRENT_TIMESTAMP
 //
 // WHERE now() > posts.expires_in;

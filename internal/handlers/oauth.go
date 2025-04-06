@@ -28,9 +28,10 @@ type oAuthHandler struct {
 	oauthService *services.OAuthService
 	kenarService *services.KenarService
 	store        *utils.SessionStore
+	jwt          *utils.JWTManager
 }
 
-func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService) *oAuthHandler {
+func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService, jwt *utils.JWTManager) *oAuthHandler {
 	if store == nil {
 		log.Fatal("cookie store can not be nil")
 	}
@@ -42,6 +43,7 @@ func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, ken
 		store:        store,
 		oauthService: serv,
 		kenarService: kenar,
+		jwt:          jwt,
 	}
 }
 
@@ -68,6 +70,7 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 
 	postToken := r.URL.Query().Get("post_token")
 	return_url := r.URL.Query().Get("return_url")
+	log.Println("return_url: ", return_url)
 	isBuyer := return_url == ""
 	if postToken == "" {
 		http.Error(w, "post_token is required", http.StatusBadRequest)
@@ -129,15 +132,23 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	userDetail, err := h.kenarService.GetUserDetail(token.AccessToken)
 	if err != nil {
-		http.Error(w, "Failed to get user information: "+err.Error(), http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError,
+			"خطا در دریافت اطلاعات کاربری",
+			"امکان دریافت اطلاعات شما وجود ندارد. لطفا بعدا تلاش کنید", err.Error())
 		return
 	}
+	// if err != nil {
+	// 	http.Error(w, "Failed to get user information: "+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	properyDetail, err := h.kenarService.GetPropertyDetail(session.PostToken)
 	if err != nil {
 		http.Error(w, "Failed to get coordinates: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-	h.oauthService.RegisterAuthData(r.Context(), &services.Transaction{
+
+	err = h.oauthService.RegisterAuthData(r.Context(), &services.Transaction{
 		PropertyDetail: properyDetail,
 		UserDetail:     userDetail,
 		TokenInfo: &services.TokenInfo{
@@ -146,6 +157,24 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 			ExpiresIn:    token.Expiry,
 		},
 	})
+	if err != nil {
+		http.Error(w, "Failed to register auth data: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println("HERE I AMMMMMMMMMMMMM")
+	jwtToken, err := h.jwt.CreateJwtToken(userDetail.UserId)
+	if err != nil {
+		http.Error(w, "Error creating jwt token", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "Authorization_Token",
+		Value:    jwtToken,
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   86400,
+	})
+	log.Println("THe problem sets here\n")
 
 	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/api/main?post_token=%s&return_url=%s", session.PostToken, session.ReturnUrl)
 	http.Redirect(w, r, url, http.StatusSeeOther)

@@ -4,6 +4,7 @@ CREATE TABLE posts (
     -- user_id VARCHAR(255) NOT NULL,
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
+    title VARCHAR(255),
     -- coordinates_set BOOLEAN DEFAULT FALSE,
     -- access_token TEXT  NOT NULL,
     -- refresh_token TEXT NOT NULL,

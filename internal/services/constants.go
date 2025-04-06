@@ -24,9 +24,9 @@ type Row struct {
 
 type propertyApiResponse struct {
 	Data struct {
-		Title     string  `json:"title"`
-		Latitude  float64 `json:"latitude"`
-		Longitude float64 `json:"longitude"`
+		Title     string  `json:"title,omitempty"`
+		Latitude  float64 `json:"latitude,omitempty"`
+		Longitude float64 `json:"longitude,omitempty"`
 	} `json:"data"`
 }
 

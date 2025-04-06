@@ -14,9 +14,11 @@ import (
 type PoiType string
 
 const (
-	PoiTypeSubway   PoiType = "subway"
-	PoiTypeHospital PoiType = "hospital"
-	PoiTypeMall     PoiType = "mall"
+	PoiTypeSubway      PoiType = "subway"
+	PoiTypeHospital    PoiType = "hospital"
+	PoiTypeSuperMarket PoiType = "super_market"
+	PoiTypeBusStation  PoiType = "bus_station"
+	PoiTypeFruitMarket PoiType = "fruit_market"
 )
 
 func (e *PoiType) Scan(src interface{}) error {
@@ -57,6 +59,7 @@ func (ns NullPoiType) Value() (driver.Value, error) {
 type Poi struct {
 	ID        int32            `db:"id" json:"id"`
 	Name      string           `db:"name" json:"name"`
+	Address   pgtype.Text      `db:"address" json:"address"`
 	Type      PoiType          `db:"type" json:"type"`
 	Latitude  float64          `db:"latitude" json:"latitude"`
 	Longitude float64          `db:"longitude" json:"longitude"`
@@ -67,7 +70,7 @@ type Post struct {
 	PostID    string           `db:"post_id" json:"post_id"`
 	Latitude  float64          `db:"latitude" json:"latitude"`
 	Longitude float64          `db:"longitude" json:"longitude"`
+	Title     pgtype.Text      `db:"title" json:"title"`
 	CreatedAt pgtype.Timestamp `db:"created_at" json:"created_at"`
 	UpdatedAt pgtype.Timestamp `db:"updated_at" json:"updated_at"`
-	Title     pgtype.Text      `db:"title" json:"title"`
 }

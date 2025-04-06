@@ -11,25 +11,21 @@ import (
 )
 
 type Querier interface {
+	Get3NearestPoiFromEachType(ctx context.Context, arg Get3NearestPoiFromEachTypeParams) ([]Get3NearestPoiFromEachTypeRow, error)
 	GetAccessTokenByUserIdPostId(ctx context.Context, arg GetAccessTokenByUserIdPostIdParams) (GetAccessTokenByUserIdPostIdRow, error)
 	GetOrCreatePoi(ctx context.Context, arg GetOrCreatePoiParams) (Poi, error)
 	GetPost(ctx context.Context, postID string) (Post, error)
-	// Get the nearest subway station to a given lat,lng (There is an issue, many posts can have the same lat,lng)
-	GetToSubwayInfo(ctx context.Context, arg GetToSubwayInfoParams) (GetToSubwayInfoRow, error)
 	InsertPost(ctx context.Context, arg InsertPostParams) (pgconn.CommandTag, error)
 	InsertToken(ctx context.Context, arg InsertTokenParams) (pgconn.CommandTag, error)
 	InsertUser(ctx context.Context, id string) (pgconn.CommandTag, error)
 	SaveTravelMetrics(ctx context.Context, arg SaveTravelMetricsParams) (pgconn.CommandTag, error)
-	// SET
 	//     access_token = EXCLUDED.access_token,
 	//     refresh_token = EXCLUDED.refresh_token,
 	//     expires_in = EXCLUDED.expires_in,
-	//     latitude = EXCLUDED.latitude,
-	//     longitude = EXCLUDED.longitude,
 	//     updated_at=CURRENT_TIMESTAMP
 	// WHERE now() > posts.expires_in;
 	UpdatePostCoordinates(ctx context.Context, arg UpdatePostCoordinatesParams) (pgconn.CommandTag, error)
-	UpsertSubwayStation(ctx context.Context, arg UpsertSubwayStationParams) (int32, error)
+	UpsertPOI(ctx context.Context, arg UpsertPOIParams) (int32, error)
 }
 
 var _ Querier = (*Queries)(nil)

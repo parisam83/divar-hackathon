@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/go-resty/resty/v2"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/transport"
 )
 
 type KenarService struct {
@@ -20,12 +20,6 @@ type KenarService struct {
 	client  *resty.Client
 	domain  string
 	queries *db.Queries
-}
-
-func (r Row) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]map[string]interface{}{
-		r.Key: r.Data,
-	})
 }
 
 func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
@@ -41,103 +35,151 @@ func (k *KenarService) GetUserDetail(accessToken string) (*userInfo, error) {
 	k.client.SetHeader("x-access-token", accessToken)
 	resp, err := k.client.R().Get("https://api.divar.ir/v1/open-platform/users")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch user information from divar: %w", err)
+		return nil, fmt.Errorf("failed to execute user information from divar: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to fetch user information from divar: %s", resp.String())
 	}
 	var UserInfo userInfo
 	if err := json.Unmarshal(resp.Body(), &UserInfo); err != nil {
 		return nil, fmt.Errorf("failed to parse user information: %w", err)
 	}
+	log.Printf("fetched User info from Divar: %+v", UserInfo)
 	return &UserInfo, nil
 }
 
-func getLocationTitle(locationType string) string {
-	switch locationType {
-	case "subway":
-		return "🚇 دسترسی به مترو"
-	case "hospital":
-		return "🏥 دسترسی به مراکز درمانی"
-	case "park":
-		return "🌳 دسترسی به پارک"
-	default:
-		return "📍 دسترسی"
+func formatDistance(distance int32) string {
+	if distance >= 1000 {
+		return fmt.Sprintf("%.1f کیلومتر", float64(distance)/1000)
 	}
+	return fmt.Sprintf("%d متر", distance)
 }
 
-type PoiDetail struct {
-	PostToken string     `json:"post_token"`
-	Subway    SubwayInfo `json:"subway"`
-	Hospital  string     `json:"hospital,omitempty"` // omitempty since hospital isn't implemented yet
-}
-type SubwayInfo struct {
-	Distance string `json:"distance"`
-	Name     string `json:"name"`
-	Duration string `json:"duration"`
+func (r Row) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]map[string]interface{}{
+		r.Key: r.Data,
+	})
 }
 
-func (k *KenarService) PostLocationWidget(ctx context.Context, userId string, poi_detail *PoiDetail) error {
+func (k *KenarService) PostLocationWidget(ctx context.Context, userId string, postToken string, amenities transport.NearbyPOIsResponse) error {
 
-	log.Printf("Posting information widget for post: %s", poi_detail.PostToken)
+	log.Printf("Posting information widget for post: %s", postToken)
 	token, err := k.queries.GetAccessTokenByUserIdPostId(ctx, db.GetAccessTokenByUserIdPostIdParams{
 		ID:     userId,
-		PostID: poi_detail.PostToken,
+		PostID: postToken,
 	})
 	if err != nil {
 		return fmt.Errorf("could not fetch access token from database")
 	}
 
-	// Parse distance for formatting
-	distanceValue, err := strconv.ParseFloat(poi_detail.Subway.Distance, 64)
-	if err != nil {
-		return fmt.Errorf("error parsing distance: %w", err)
+	widgets := []Row{
+		{"title_row", map[string]interface{}{"text": "🏙️ دسترسی به امکانات شهری"}},
+		{"subtitle_row", map[string]interface{}{
+			"text":        "امکانات نزدیک به این ملک:",
+			"has_divider": true,
+		}},
 	}
 
-	// Format distance text
-	var distanceText string
-	if distanceValue >= 1000 {
-		distanceText = fmt.Sprintf("%.1f کیلومتر", distanceValue/1000)
-	} else {
-		distanceText = fmt.Sprintf("%.0f متر", distanceValue)
+	if amenities.Subway != nil && len(amenities.Subway.POIs) > 0 {
+		text := ""
+		for i, subway := range amenities.Subway.POIs {
+			if i > 0 {
+				text += "\n\n"
+			}
+			distanceText := formatDistance(subway.Distance)
+			text += fmt.Sprintf("(%d) 🚉 ایستگاه مترو: %s\n", i+1, subway.Name) +
+				fmt.Sprintf("📍 فاصله: %s\n", distanceText) +
+				fmt.Sprintf("🚗 مدت زمان با خودرو: %d دقیقه", subway.Duration)
+		}
+		widgets = append(widgets,
+			Row{"description_row", map[string]interface{}{
+				"text":        text,
+				"has_divider": true,
+				"expandable":  true,
+			}},
+		)
 	}
 
-	// Create a more structured widget with multiple rows
-	payload := Payload{
-		Widgets: []Row{
-			{"title_row", map[string]interface{}{
-				"text": "🚇 دسترسی به مترو",
-			}},
-			{"subtitle_row", map[string]interface{}{
-				"text":        "نزدیک‌ترین ایستگاه مترو به این ملک:",
+	if amenities.BusStation != nil && len(amenities.BusStation.POIs) > 0 {
+		text := ""
+		for i, bus := range amenities.BusStation.POIs {
+			distanceText := formatDistance(bus.Distance)
+			if i > 0 {
+				text += "\n\n"
+			}
+			text += fmt.Sprintf("(%d) 🚌 ایستگاه اتوبوس: %s\n", i+1, bus.Name) +
+				fmt.Sprintf("📍 فاصله: %s\n", distanceText) +
+				fmt.Sprintf("🚗 مدت زمان با خودرو: %d دقیقه", bus.Duration)
+		}
+
+		widgets = append(widgets,
+			Row{"description_row", map[string]interface{}{
+				"text":        text,
 				"has_divider": true,
+				"expandable":  true,
 			}},
-			{"description_row", map[string]interface{}{
-				"text":        "🚉 " + poi_detail.Subway.Name,
-				"has_divider": true,
-			}},
-			{"description_row", map[string]interface{}{
-				"text":        "📍 فاصله تا ایستگاه: " + distanceText,
-				"has_divider": true,
-			}},
-			{"description_row", map[string]interface{}{
-				"text":        "🚗 مدت زمان با خودرو: " + poi_detail.Subway.Duration + " دقیقه",
-				"has_divider": false,
-			}},
-		},
+		)
 	}
+
+	if amenities.Hospital != nil && len(amenities.Hospital.POIs) > 0 {
+		text := ""
+		for i, hospital := range amenities.Hospital.POIs {
+			distanceText := formatDistance(hospital.Distance)
+			if i > 0 {
+				text += "\n\n"
+			}
+			text += fmt.Sprintf("(%d) 🏥 بیمارستان: %s\n", i+1, hospital.Name) +
+				fmt.Sprintf("📍 فاصله: %s\n", distanceText) +
+				fmt.Sprintf("🚗 مدت زمان با خودرو: %d دقیقه", hospital.Duration)
+		}
+
+		widgets = append(widgets,
+			Row{"description_row", map[string]interface{}{
+				"text":        text,
+				"has_divider": true,
+				"expandable":  true,
+			}},
+		)
+	}
+
+	if amenities.Supermarket != nil && len(amenities.Supermarket.POIs) > 0 {
+		text := ""
+		for i, market := range amenities.Supermarket.POIs {
+			distanceText := formatDistance(market.Distance)
+			if i > 0 {
+				text += "\n\n"
+			}
+			text += fmt.Sprintf("(%d) 🛒 سوپرمارکت: %s\n", i+1, market.Name) +
+				fmt.Sprintf("📍 فاصله: %s\n", distanceText) +
+				fmt.Sprintf("🚗 مدت زمان با خودرو: %d دقیقه", market.Duration)
+		}
+
+		widgets = append(widgets,
+			Row{"description_row", map[string]interface{}{
+				"text":        text,
+				"has_divider": true,
+				"expandable":  true,
+			}},
+		)
+	}
+	payload := Payload{widgets}
 	jsonData, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error marshaling JSON: %w", err)
 	}
-
 	resp, err := k.client.R().
 		SetHeader("x-access-token", token.AccessToken).
 		SetBody(jsonData).
-		Post(AddWidgetUrl + poi_detail.PostToken)
-
+		Post(AddWidgetUrl + postToken)
 	if err != nil {
+		log.Println(err.Error())
 		return fmt.Errorf("failed to post widgets: %w", err)
 	}
-
+	if resp.IsError() {
+		return fmt.Errorf("failed to set poi information on user's ad: %s", resp.String())
+	}
 	if resp.StatusCode() != http.StatusOK {
+		log.Println(resp.StatusCode())
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
@@ -176,6 +218,10 @@ func (k *KenarService) fetchPropertyInfoFromDivar(postToken string) (*propertyIn
 	err = json.Unmarshal(resp.Body(), &apiResponse)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse property response: %v", err.Error())
+	}
+	// if the ad has no coordinates, we should not save it
+	if apiResponse.Data.Latitude == 0 && apiResponse.Data.Longitude == 0 {
+		return nil, fmt.Errorf("property has missing or invalid coordinates (0,0), Can not have this post in application")
 	}
 	propertyInfo := &propertyInfo{
 		PostID:    postToken,

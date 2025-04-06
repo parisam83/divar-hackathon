@@ -56,7 +56,6 @@ type SessionConfig struct {
 
 type JWTConfig struct {
 	JwtSecret string `mapstructure:"JwtSecret"`
-	// EncKey  string `mapstructure:"SessionEncKey"`
 }
 
 type SnappConfig struct {
@@ -104,8 +103,11 @@ func LoadConfig() (*Config, error) {
 		log.Printf("Error reading config file")
 	}
 	for _, key := range viper.AllKeys() {
+		// log.Println(key)
 		value := viper.GetString(key)
 		expanded := os.ExpandEnv(value)
+		// log.Println(key)
+		// log.Println(value)
 		viper.Set(key, expanded)
 	}
 

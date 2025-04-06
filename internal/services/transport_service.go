@@ -10,6 +10,7 @@ import (
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/transport"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type TransportService struct {
@@ -29,18 +30,34 @@ func NewTransportService(snapp *transport.Snapp, tapsi *transport.Tapsi, neshan 
 	}
 }
 
-func (t *TransportService) GetPrice(originLat, originLong, destinationLat, destinationLong string) (map[string]int, error) {
-	prices := make(map[string]int)
-	for name, client := range t.priceProviders {
-		log.Println(name)
-		price := client.GetPriceEstimation(originLat, originLong, destinationLat, destinationLong)
-		prices[name] = price
-	}
-	return prices, nil
+type GetPriceResponse struct {
+	SnappPrice int `json:"snapp_price"`
+	TapsiPrice int `json:"tapsi_price"`
 }
 
-func (s *TransportService) FindNearestStation(postToken, originLat, originLong string) (*transport.StationResponse, error) {
-	ctx := context.Background()
+func (t *TransportService) GetPrice(ctx context.Context, originLat, originLong, destinationLat, destinationLong string) (*GetPriceResponse, error) {
+	response := &GetPriceResponse{}
+	for name, client := range t.priceProviders {
+		price, err := client.GetPriceEstimation(ctx, originLat, originLong, destinationLat, destinationLong)
+		if err != nil {
+			log.Printf("%s price error: %v", name, err)
+			continue
+		}
+		switch name {
+		case "snapp":
+			response.SnappPrice = price
+		case "tapsi":
+			response.TapsiPrice = price
+		}
+
+	}
+	if response.SnappPrice == 0 && response.TapsiPrice == 0 {
+		return response, fmt.Errorf("no price available from any provider")
+	}
+	return response, nil
+}
+
+func (s *TransportService) FindNearestStation(ctx context.Context, postToken, originLat, originLong string) (*transport.NearbyPOIsResponse, error) {
 
 	// Convert string coordinates to float64
 	lat, err := strconv.ParseFloat(originLat, 64)
@@ -53,70 +70,121 @@ func (s *TransportService) FindNearestStation(postToken, originLat, originLong s
 		return nil, fmt.Errorf("invalid longitude: %w", err)
 	}
 
-	result, err := s.query.GetToSubwayInfo(ctx, db.GetToSubwayInfoParams{
-		Latitude:  lat,
+	result, err := s.query.Get3NearestPoiFromEachType(ctx, db.Get3NearestPoiFromEachTypeParams{
 		Longitude: lng,
-	})
+		Latitude:  lat})
 
-	// If we found a cached result, use it
-	if err == nil {
-		log.Printf("Cache hit for coordinates (%s, %s)", originLat, originLong)
+	if err == nil && len(result) > 0 {
+		log.Printf("Found POIs in database for coordinates (%s, %s)", originLat, originLong)
 
-		return &transport.StationResponse{
-			ClosestStation: result.StationName,
-			TotalDistance:  fmt.Sprintf("%d", result.Distance),
-			TotalDuration:  fmt.Sprintf("%d", result.Duration),
-		}, nil
+		response := &transport.NearbyPOIsResponse{
+			Subway:      &transport.POICategory{},
+			BusStation:  &transport.POICategory{},
+			Hospital:    &transport.POICategory{},
+			Supermarket: &transport.POICategory{},
+			FruitMarket: &transport.POICategory{},
+		}
+
+		// Process the results and populate the response
+		for _, poi := range result {
+			// Add logic here to populate the appropriate category based on poi.Type
+			// This is a simplified example - adjust according to your actual data structure
+			switch poi.PoiType {
+			case "subway":
+				response.Subway.POIs = append(response.Subway.POIs, convertToTransportPOI(poi))
+			case "bus_station":
+				response.BusStation.POIs = append(response.BusStation.POIs, convertToTransportPOI(poi))
+			case "hospital":
+				response.Hospital.POIs = append(response.Hospital.POIs, convertToTransportPOI(poi))
+			case "super_market":
+				response.Supermarket.POIs = append(response.Supermarket.POIs, convertToTransportPOI(poi))
+			case "fruit_market":
+				response.FruitMarket.POIs = append(response.FruitMarket.POIs, convertToTransportPOI(poi))
+			}
+		}
+		return response, nil
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		log.Printf("Database error when checking cache: %v", err)
 		return nil, fmt.Errorf("error checking cache: %w", err)
 	}
 
-	apiResult, err := s.locationProvider.GetSubwayStation(originLat, originLong)
+	apiResult, err := s.locationProvider.GetAllNearbyPOIs(ctx, originLat, originLong, 3)
 	if err != nil {
 		return nil, fmt.Errorf("error calling external API: %w", err)
 	}
 
-	go s.cacheStationResult(ctx, postToken, apiResult)
+	go s.cacheAllPOIResults(context.Background(), postToken, apiResult)
 
 	return apiResult, nil
 
 }
 
-func (t *TransportService) cacheStationResult(ctx context.Context, postId string, apiResult *transport.StationResponse) {
-	poiId, err := t.query.UpsertSubwayStation(ctx, db.UpsertSubwayStationParams{
-		Latitude:  apiResult.StationLat,
-		Longitude: apiResult.StationLong,
-		Name:      apiResult.ClosestStation,
-	})
-	if err != nil {
-		log.Printf("Error getting/creating POI: %v", err)
-		return
+func convertToTransportPOI(poi db.Get3NearestPoiFromEachTypeRow) *transport.POIInfo {
+	return &transport.POIInfo{
+		Name:     poi.PoiName,
+		Address:  poi.PoiAddress.String,
+		Lat:      poi.PoiLatitude,
+		Long:     poi.PoiLongitude,
+		Duration: poi.Duration,
+		Distance: poi.Distance,
 	}
-	distance, err := strconv.Atoi(apiResult.TotalDistance)
-	if err != nil {
-		log.Printf("Error converting distance to int: %v", err)
-		return
+}
+
+func (t *TransportService) cacheAllPOIResults(ctx context.Context, postId string, apiResult *transport.NearbyPOIsResponse) {
+
+	if apiResult.Subway != nil && len(apiResult.Subway.POIs) > 0 {
+		t.processPOICategory(ctx, postId, apiResult.Subway.POIs, "subway")
 	}
-	duration, err := strconv.Atoi(apiResult.TotalDuration)
-	if err != nil {
-		log.Printf("Error converting distance to int: %v", err)
-		return
+
+	if apiResult.BusStation != nil && len(apiResult.BusStation.POIs) > 0 {
+		t.processPOICategory(ctx, postId, apiResult.BusStation.POIs, "bus_station")
 	}
-	result, err := t.query.SaveTravelMetrics(ctx, db.SaveTravelMetricsParams{
-		Distance:      int32(distance),
-		Duration:      int32(duration),
-		OriginID:      postId,
-		DestinationID: poiId,
-	})
-	if err != nil {
-		log.Printf("Error saving travel metrics: %v", err)
-		return
+
+	if apiResult.Hospital != nil && len(apiResult.Hospital.POIs) > 0 {
+		t.processPOICategory(ctx, postId, apiResult.Hospital.POIs, "hospital")
 	}
-	if result.RowsAffected() == 0 {
-		log.Printf("Travel metrics already exist for origin %s and destination %d", postId, poiId)
+
+	if apiResult.Supermarket != nil && len(apiResult.Supermarket.POIs) > 0 {
+		t.processPOICategory(ctx, postId, apiResult.Supermarket.POIs, "super_market")
 	}
-	log.Printf("Successfully cached subway result for (%f, %f)", postId, apiResult.ClosestStation)
-	//we need to save station into poi + travel metrics
+
+	if apiResult.FruitMarket != nil && len(apiResult.FruitMarket.POIs) > 0 {
+		t.processPOICategory(ctx, postId, apiResult.FruitMarket.POIs, "fruit_market")
+	}
+}
+func (t *TransportService) processPOICategory(ctx context.Context, postId string, pois []*transport.POIInfo, poiType string) {
+	for _, poi := range pois {
+		// Upsert the POI
+		poiId, err := t.query.UpsertPOI(ctx, db.UpsertPOIParams{
+			Latitude:  poi.Lat,
+			Longitude: poi.Long,
+			Name:      poi.Name,
+			Address:   pgtype.Text{String: poi.Address, Valid: true},
+			Type:      db.PoiType(poiType),
+		})
+
+		if err != nil {
+			log.Printf("Error upserting %s POI: %v", poiType, err)
+			continue
+		}
+
+		result, err := t.query.SaveTravelMetrics(ctx, db.SaveTravelMetricsParams{
+			Distance:      poi.Distance,
+			Duration:      poi.Duration,
+			OriginID:      postId,
+			DestinationID: poiId,
+		})
+
+		if err != nil {
+			log.Printf("Error saving travel metrics for %s: %v", poiType, err)
+			continue
+		}
+
+		if result.RowsAffected() == 0 {
+			log.Printf("Travel metrics already exist for origin %s and destination %d (%s)", postId, poiId, poiType)
+		} else {
+			log.Printf("Successfully cached %s '%s' for post ID %s", poiType, poi.Name, postId)
+		}
+	}
 }

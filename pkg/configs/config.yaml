@@ -1,7 +1,7 @@
 Database:
   Host: ${DB_HOST}
-  Port: 5432
-  DBName: poi
+  Port: ${DB_PORT}
+  DBName: ${DB_NAME}
   Username: ${DB_USERNAME}
   Password: ${DB_PASSWORD}
   MaxConns: 5
@@ -21,7 +21,6 @@ Server:
 
 Session:
   SessionAuthKey: "${SESSION_AUTH_KEY}"
-  # SessionEncKey:  "${SESSION_ENC_KEY}"
 
 Neshan:
   NeshanApiKey: "${NESHAN_API_KEY}"

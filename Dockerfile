@@ -21,7 +21,7 @@ WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/web ./web
 COPY --from=builder /app/pkg/configs ./pkg/configs
-COPY --from=builder /app/pkg/database ./pkg/database
+# COPY --from=builder /app/pkg/database ./pkg/database
 
 
 EXPOSE 8000

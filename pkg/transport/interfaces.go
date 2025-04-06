@@ -1,9 +1,11 @@
 package transport
 
+import "context"
+
 type PriceProvider interface {
-	GetPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int
+	GetPriceEstimation(ctx context.Context, originLat, originLong, destinationLat, destinationLong string) (int, error)
 }
 
 type LocationProvider interface {
-	GetSubwayStation(startLatstr, startLongstr string) (*StationResponse, error)
+	GetAllNearbyPOIs(ctx context.Context, startLatstr, startLongstr string, limit int) (*NearbyPOIsResponse, error)
 }

@@ -48,6 +48,7 @@ func main() {
 	sessionStore := utils.NewSessionStore(&conf.Session)
 	// fmt.Println(conf.Session.AuthKey)
 	// fmt.Println(reflect.ValueOf(conf.Session.AuthKey).Kind())
+	jwtManager := utils.NewJWTManager(&conf.Jwt)
 
 	snapp := transport.NewSnapp(&conf.Snapp)
 	// log.Println(conf.Snapp.ApiKey)
@@ -59,19 +60,19 @@ func main() {
 	kenarHandler := handlers.NewKenarHandler(sessionStore, kenarService, taxiService)
 
 	oauthService := services.NewOAuthService(conf.Kenar, query, conPool)
-	oauthHandler := handlers.NewOAuthHandler(sessionStore, oauthService, kenarService)
+	oauthHandler := handlers.NewOAuthHandler(sessionStore, oauthService, kenarService, jwtManager)
 	// oauthHandler := handlers.NewOAuthHandler(oauthService)
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World!"))
 	})
 	r.HandleFunc("/poi", kenarHandler.Poi)
 	r.HandleFunc("/addon/oauth", oauthHandler.AddonOauth)
 	r.HandleFunc("/api/calculate-fare", kenarHandler.GetPrice)
 	r.HandleFunc("/api/find-amenities", kenarHandler.Poi)
-	r.HandleFunc("/api/add-to-ad", kenarHandler.AddLocationWidget)
+	r.HandleFunc("/api/add-to-ad", jwtManager.JWTMiddlewear(kenarHandler.AddLocationWidget))
 
 	r.HandleFunc("/api/get-origin", kenarHandler.GetOriginCoordinates).Methods("POST")
 	r.HandleFunc("/oauth/callback", oauthHandler.OauthCallback)
@@ -79,11 +80,14 @@ func main() {
 	//front end
 	// Serve static files (CSS, JS)
 	mime.AddExtensionType(".css", "text/css")
-	fileServer := http.FileServer(http.Dir("./web/static"))
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fileServer))
+
+	// fileServer := http.FileServer(http.Dir("./web/static"))
+	// r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fileServer))
 	r.HandleFunc("/api/main", handleLanding)
 
-	// front end
+	htmlFileServer := http.FileServer(http.Dir("./web"))
+	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", htmlFileServer))
+	r.HandleFunc("/error", utils.RenderErrorPage)
 
 	port := conf.Server.Port
 	log.Printf("Server started on port %s", port)
@@ -93,13 +97,15 @@ func main() {
 func handleLanding(w http.ResponseWriter, r *http.Request) {
 	postToken := r.URL.Query().Get("post_token")
 	return_url := r.URL.Query().Get("return_url")
+	log.Println(postToken)
+	log.Println(return_url)
 
 	if postToken == "" || return_url == "" {
 		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
 		return
 	}
 
-	tmp, err := template.ParseFiles("./web/static/landing.html")
+	tmp, err := template.ParseFiles("./web/landing.html")
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
@@ -111,6 +117,7 @@ func handleLanding(w http.ResponseWriter, r *http.Request) {
 		Token:        postToken,
 		RedirectLink: return_url,
 	}
+
 	tmp.Execute(w, data)
 	return
 }

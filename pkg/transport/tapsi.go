@@ -2,12 +2,14 @@ package transport
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 	"github.com/andybalholm/brotli"
@@ -80,12 +82,31 @@ func NewTapsi(s *configs.TapsiConfig) *Tapsi {
 
 }
 
-func (t *Tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLat, strdestinationLong string) int {
+func (t *Tapsi) GetPriceEstimation(ctx context.Context, stroriginLat, stroriginLong, strdestinationLat, strdestinationLong string) (int, error) {
 
-	destinationLong, _ := strconv.ParseFloat(strdestinationLong, 64)
-	destinationLat, _ := strconv.ParseFloat(strdestinationLat, 64)
-	originLat, _ := strconv.ParseFloat(stroriginLat, 64)
-	originLong, _ := strconv.ParseFloat(stroriginLong, 64)
+	originLat, err := strconv.ParseFloat(stroriginLat, 64)
+	if err != nil {
+		log.Printf("Error parsing origin latitude: %v", err)
+		return 0, fmt.Errorf("invalid origin latitude format: %w", err)
+	}
+
+	originLong, err := strconv.ParseFloat(stroriginLong, 64)
+	if err != nil {
+		log.Printf("Error parsing origin longitude: %v", err)
+		return 0, fmt.Errorf("invalid origin longitude format: %w", err)
+	}
+
+	destinationLat, err := strconv.ParseFloat(strdestinationLat, 64)
+	if err != nil {
+		log.Printf("Error parsing destination latitude: %v", err)
+		return 0, fmt.Errorf("invalid destination latitude format: %w", err)
+	}
+
+	destinationLong, err := strconv.ParseFloat(strdestinationLong, 64)
+	if err != nil {
+		log.Printf("Error parsing destination longitude: %v", err)
+		return 0, fmt.Errorf("invalid destination longitude format: %w", err)
+	}
 
 	data := tapsiRequest{
 		Origin: &origin{
@@ -111,67 +132,77 @@ func (t *Tapsi) GetPriceEstimation(stroriginLat, stroriginLong, strdestinationLa
 
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error marshaling tapsi request data: %v", err)
+		return 0, fmt.Errorf("failed to prepare tapsi request: %w", err)
 	}
 	body := bytes.NewReader(dataBytes)
-	req, err := http.NewRequest("POST", "https://api.tapsi.cab/api/v3/ride/preview", body)
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.tapsi.cab/api/v3/ride/preview", body)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error creating request: %v", err)
+		return 0, fmt.Errorf("failed to create request: %w", err)
 	}
 	t.SetHeader(req)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error making API call to Tapsi: %v", err)
+		return 0, fmt.Errorf("failed to connect to Tapsi service: %w", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		log.Printf("Unexpected status code from Tapsi API: %d", resp.StatusCode)
+		return 0, fmt.Errorf("unexpected response from Tapsi service (code: %d)", resp.StatusCode)
+	}
 	reader := brotli.NewReader(resp.Body)
-
-	// Read the decompressed data
 	bodyText, err := io.ReadAll(reader)
 	if err != nil {
-		log.Println(bodyText)
-		log.Fatal(err)
+		log.Printf("Error reading tapsi decompressed response: %v", err)
+		return 0, fmt.Errorf("failed to read tapsi response: %w", err)
 	}
-
 	var jsonData tapsiResponse
 	err = json.Unmarshal(bodyText, &jsonData)
 	if err != nil {
-		fmt.Println("test")
-		log.Fatal(err)
-	}
-
-	if resp.StatusCode != 200 {
-		log.Fatal("Status code is not 200")
+		log.Printf("Error unmarshaling response: %v", err)
+		return 0, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if jsonData.Data == nil {
-		log.Fatal("Data is nil")
+		log.Printf("No data found in Tapsi response")
+		return 0, fmt.Errorf("no price data available from Tapsi")
 	}
 
 	if len(jsonData.Data.Categories) == 0 {
-		log.Fatal("No categories found")
+		log.Printf("No categories found in Tapsi response")
+		return 0, fmt.Errorf("no service categories available for this route")
 	}
 
 	if len(jsonData.Data.Categories[0].Items) == 0 {
-		log.Fatal("No items found")
+		log.Printf("No items found in first category")
+		return 0, fmt.Errorf("no service options available in the selected category")
 	}
 
 	if jsonData.Data.Categories[0].Items[0].Service == nil {
-		log.Fatal("No service found")
+		log.Printf("No service information found in Tapsi response")
+		return 0, fmt.Errorf("service details not available")
 	}
 
 	if len(jsonData.Data.Categories[0].Items[0].Service.Prices) == 0 {
-		log.Fatal("No prices found")
+		log.Printf("No prices found in service")
+		return 0, fmt.Errorf("price information not available for this service")
 	}
 
-	if jsonData.Data.Categories[0].Items[0].Service.Prices[0].PassengerShare == 0 {
-		log.Fatal("Price is 0")
+	price := jsonData.Data.Categories[0].Items[0].Service.Prices[0].PassengerShare
+	if price == 0 {
+		log.Printf("Received zero price from Tapsi")
+		return 0, fmt.Errorf("invalid price information (zero price)")
 	}
 
-	return jsonData.Data.Categories[0].Items[0].Service.Prices[0].PassengerShare
+	return price, nil
 }
 
 func (t *Tapsi) SetHeader(req *http.Request) {
@@ -189,7 +220,6 @@ func (t *Tapsi) SetHeader(req *http.Request) {
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Priority", "u=4")
 	req.Header.Set("TE", "trailers")
-	// req.Header.Set("Accept-Encoding", "br")
 
 	req.Header.Set("Cookie", "_clck="+t.clck+"; "+
 		"accessToken="+t.accessToken+"; "+

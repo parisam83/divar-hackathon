@@ -2,10 +2,13 @@ package transport
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
 )
@@ -62,7 +65,7 @@ func NewSnapp(s *configs.SnappConfig) *Snapp {
 
 }
 
-func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destinationLong string) int {
+func (s *Snapp) GetPriceEstimation(ctx context.Context, originLat, originLong, destinationLat, destinationLong string) (int, error) {
 	data := snappRequest{
 		Points: []*snappPoint{
 			{Lat: originLat, Lng: originLong},
@@ -77,51 +80,57 @@ func (s *Snapp) GetPriceEstimation(originLat, originLong, destinationLat, destin
 
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error marshaling snapp request data: %v", err)
+		return 0, fmt.Errorf("failed to prepare snapp request : %w", err)
 	}
 	body := bytes.NewReader(dataBytes)
-	req, err := http.NewRequest("POST", "https://app.snapp.taxi/api/api-base/v2/passenger/newprice/s/6/0", body)
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://app.snapp.taxi/api/api-base/v2/passenger/newprice/s/6/0", body)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error creating snapp request: %v", err)
+		return 0, fmt.Errorf("failed to create snapp request: %w", err)
+
 	}
 	s.SetHeader(req)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error making API call to Snapp: %v", err)
+		return 0, fmt.Errorf("failed to connect to Snapp service: %w", err)
 	}
 	defer resp.Body.Close()
 
 	bodyText, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error reading Snapp response body: %v", err)
+		return 0, fmt.Errorf("failed to read Snapp response: %w", err)
+	}
+
+	if resp.StatusCode != 200 {
+		log.Printf("Unexpected status code from Snapp API: %d", resp.StatusCode)
+		return 0, fmt.Errorf("unexpected response from Snapp service (code: %d)", resp.StatusCode)
 	}
 
 	var jsonData snappResponse
 	err = json.Unmarshal(bodyText, &jsonData)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error unmarshaling Snapp response: %v", err)
+		return 0, fmt.Errorf("failed to parse Snapp response: %w", err)
 	}
 
-	if resp.StatusCode != 200 {
-		log.Println(resp.StatusCode)
-		log.Fatal("Status code is not 200")
-	}
-
-	if jsonData.Data == nil {
-		log.Fatal("No data found")
-	}
-
-	if len(jsonData.Data.Prices) == 0 {
-		log.Fatal("No price found")
+	if jsonData.Data == nil || len(jsonData.Data.Prices) == 0 {
+		log.Printf("No prices found in Snapp response")
+		return 0, fmt.Errorf("no price options available for this Snapp route")
 	}
 
 	if jsonData.Data.Prices[0].Final == 0 {
-		log.Fatal("Price is 0")
+		log.Printf("Received zero price from Snapp")
+		return 0, fmt.Errorf("invalid price information (zero price) from Snapp")
 	}
 
-	return jsonData.Data.Prices[0].Final / 10
+	return jsonData.Data.Prices[0].Final / 10, nil
 }
 
 func (s *Snapp) SetHeader(req *http.Request) {

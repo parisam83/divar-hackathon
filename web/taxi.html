@@ -14,15 +14,14 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    
-    <link rel="stylesheet" href="../static/css/taxi_style.css">
+    <link rel="stylesheet" href="static/css/taxi_style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>محاسبه کرایه تاکسی</h1>
             <p>مقصد دلخواه خود را روی نقشه انتخاب کنید</p>
-            <a href="./landing.html" class="back-link">بازگشت به صفحه اصلی</a>
+            <a href="./landing.html?source=back" class="back-link">بازگشت به صفحه اصلی</a>
         </header>
         
         <div class="map-container">
@@ -43,7 +42,6 @@
                 
                 <div class="location-info">
                     <h3>مقصد</h3>
-                    <p id="destination-address">هنوز انتخاب نشده</p>
                     <p id="destination-coords"></p>
                 </div>
                 
@@ -51,16 +49,30 @@
                 
                 <div class="price-result" id="price-result">
                     <h3>کرایه تخمینی:</h3>
-                    <p id="price-value">۰ تومان</p>
-                    <!-- <p id="distance"></p> -->
-                    <!-- <p id="estimated-time"></p> -->
-                    
-                    <!-- <button class="btn-add-to-listing" id="add-to-listing">افزودن به آگهی من</button> -->
+                    <div class="taxi-prices">
+                        <div class="taxi-price-card" id="snapp-card">
+                            <div class="service-name">اسنپ</div>
+                            <div class="price-container">
+                                <span class="price-value" id="snapp-price">در حال محاسبه...</span>
+                                <span class="price-label">تومان</span>
+                            </div>
+                            <div class="unavailable-message">سرویس در دسترس نیست</div>
+                        </div>
+                        
+                        <div class="taxi-price-card" id="tapsi-card">
+                            <div class="service-name">تپسی</div>
+                            <div class="price-container">
+                                <span class="price-value" id="tapsi-price">در حال محاسبه...</span>
+                                <span class="price-label">تومان</span>
+                            </div>
+                            <div class="unavailable-message">سرویس در دسترس نیست</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-            <script>
+    <script>
     // 1. Global variables to store state
     const TEHRAN_CENTER = { lat: 35.6892, lng: 51.3890 };
     let map, originMarker, destinationMarker, routeLine;
@@ -69,17 +81,15 @@
     
     // 2. INITIALIZATION - When page loads
     window.onload = function() {
-        // 2.1 Get token from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        postToken = urlParams.get('post_token');
-        redirectLink = urlParams.get('return_url');
-        
+        postToken = sessionStorage.getItem('divarToken');
+        redirectLink = sessionStorage.getItem('redirectLink');
+
         if (!postToken) {
-            alert("Error: Missing authentication token");
+            alert("خطا: توکن احراز هویت یافت نشد. لطفا از صفحه اصلی وارد شوید.");
+        
+            window.location.href = "/web/landing.html?source=back";
             return;
         }
-        
-        // 2.2 Initialize map and fetch origin
         initMap();
     };
     
@@ -103,7 +113,7 @@
             return {
                 lat: parseFloat(data.Latitude),
                 lng: parseFloat(data.Longitude),
-                address: data.address || "Property Location"
+                address: data.title || "Property Location"
             };
         } catch (error) {
             console.error("Error fetching origin:", error);
@@ -150,7 +160,7 @@
         // 4.5 Add marker for origin and center map
         originMarker = L.marker([origin.lat, origin.lng], {icon: originIcon})
             .addTo(map)
-            .bindPopup('Origin: ' + origin.address)
+            .bindPopup('مبدا: ' + origin.address)
             .openPopup();
         
         map.setView([origin.lat, origin.lng], 13);
@@ -186,11 +196,10 @@
         // 5.4 Add marker for destination
         destinationMarker = L.marker([lat, lng], {icon: icon})
             .addTo(map)
-            .bindPopup('Destination')
+            .bindPopup('مقصد')
             .openPopup();
         
         // 5.5 Update UI
-        document.getElementById('destination-address').textContent = destination.address;
         document.getElementById('destination-coords').textContent = 
             `Coordinates: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         
@@ -209,16 +218,29 @@
         // 5.9 Hide previous results if any
         document.getElementById('price-result').classList.remove('show');
     }
-    
-    // 6. CALCULATE PRICE - When calculate button is clicked
+
     async function calculateFare() {
         if (!origin || !destination) {
-            alert("Please select a destination first.");
+            alert("لطفا ابتدا مقصد را انتخاب کنید.");
             return;
         }
         
+        // Show loading state
+        document.getElementById('price-result').classList.add('show');
+        
+        // Reset previous states
+        const snappCard = document.getElementById('snapp-card');
+        const tapsiCard = document.getElementById('tapsi-card');
+        
+        // Remove any existing unavailable classes
+        snappCard.classList.remove('unavailable');
+        tapsiCard.classList.remove('unavailable');
+        
+        // Set loading state
+        document.getElementById('snapp-price').textContent = "در حال محاسبه...";
+        document.getElementById('tapsi-price').textContent = "در حال محاسبه...";
+        
         try {
-            // 6.1 Call backend API to calculate fare
             const response = await fetch('/api/calculate-fare', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -233,74 +255,37 @@
                 throw new Error('Failed to calculate fare');
             }
             
-            // 6.2 Get fare calculation from response
+            // Get fare calculation from response
             const fareData = await response.json();
+            console.log("Received price data:", fareData);
             
-            // 6.3 Update UI with results
-            document.getElementById('price-value').textContent = `اسنپ: ${fareData.snappPrice.toLocaleString()} تومان | تپسی: ${fareData.tapsiPrice.toLocaleString()} تومان`;
-            // document.getElementById('distance').textContent = `Distance: ${fareData.distance.toFixed(1)} km`;
-            // document.getElementById('estimated-time').textContent = `Estimated time: ${fareData.time} minutes`;
-            document.getElementById('price-result').classList.add('show');
+            // Update Snapp price
+            if (fareData.snapp_price && fareData.snapp_price > 0) {
+                document.getElementById('snapp-price').textContent = fareData.snapp_price.toLocaleString();
+                snappCard.classList.remove('unavailable');
+            } else {
+                snappCard.classList.add('unavailable');
+            }
+            
+            // Update Tapsi price
+            if (fareData.tapsi_price && fareData.tapsi_price > 0) {
+                document.getElementById('tapsi-price').textContent = fareData.tapsi_price.toLocaleString();
+                tapsiCard.classList.remove('unavailable');
+            } else {
+                tapsiCard.classList.add('unavailable');
+            }
             
         } catch (error) {
             console.error("Error calculating fare:", error);
-            alert("Could not calculate fare. Please try again.");
+            // Show error for both services
+            snappCard.classList.add('unavailable');
+            tapsiCard.classList.add('unavailable');
+            
+            alert("مشکلی در محاسبه قیمت‌ها رخ داد. لطفا دوباره تلاش کنید.");
         }
     }
     
-    // 7. ADD TO LISTING - When user wants to add to their listing
-    // async function addToListing() {
-    //     if (!document.getElementById('price-result').classList.contains('show')) {
-    //         alert("Please calculate fare first");
-    //         return;
-    //     }
-        
-    //     try {
-    //         // 7.1 Call backend API to save fare info to listing
-    //         const response = await fetch('/api/add-to-listing', {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             body: JSON.stringify({
-    //                 post_token: postToken,
-    //                 origin: { lat: origin.lat, lng: origin.lng, address: origin.address },
-    //                 destination: { lat: destination.lat, lng: destination.lng, address: destination.address },
-    //                 price: document.getElementById('price-value').textContent,
-    //                 distance: document.getElementById('distance').textContent,
-    //                 time: document.getElementById('estimated-time').textContent
-    //             })
-    //         });
-            
-    //         if (!response.ok) {
-    //             throw new Error('Failed to add to listing');
-    //         }
-            
-    //         // 7.2 Redirect back to Divar
-    //         alert("Successfully added to your listing!");
-    //         if (redirectLink) {
-    //             window.location.href = redirectLink;
-    //         }
-            
-    //     } catch (error) {
-    //         console.error("Error adding to listing:", error);
-    //         alert("Could not add to your listing. Please try again.");
-    //     }
-    // }
-    
-    // 8. UTILITY - Calculate distance between coordinates
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // Earth's radius in km
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
-    
-    // 9. EVENT LISTENERS
     document.getElementById('calculate-price').addEventListener('click', calculateFare);
-    // document.getElementById('add-to-listing').addEventListener('click', addToListing);
     </script>
 </body>
 </html>

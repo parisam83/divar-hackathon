@@ -37,6 +37,7 @@ func NewOAuthService(appConfig configs.KenarConfig, queries *db.Queries, db *pgx
 	}
 }
 func (t *Transaction) Validate() error {
+	log.Println("Validating transaction data")
 	if t.PropertyDetail == nil || t.UserDetail == nil || t.TokenInfo == nil {
 		return fmt.Errorf("missing required transaction components")
 	}
@@ -60,6 +61,7 @@ func (t *Transaction) Validate() error {
 	return nil
 }
 func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction) error {
+	log.Println("RegisterAuthData called")
 	err := input.Validate()
 	if err != nil {
 		return fmt.Errorf("invalid transaction data: %w", err)

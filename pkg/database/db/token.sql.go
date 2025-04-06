@@ -8,11 +8,12 @@ package db
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getAccessTokenByUserIdPostId = `-- name: GetAccessTokenByUserIdPostId :one
-SELECT t.id, t.post_id, user_id, access_token, refresh_token, expires_at, t.created_at, t.updated_at, p.post_id, latitude, longitude, p.created_at, p.updated_at, title, u.id, u.created_at, u.updated_at FROM tokens t
+SELECT t.id, t.post_id, user_id, access_token, refresh_token, expires_at, t.created_at, t.updated_at, p.post_id, latitude, longitude, title, p.created_at, p.updated_at, u.id, u.created_at, u.updated_at FROM tokens t
 JOIN posts p ON p.post_id=t.post_id
 JOIN users u ON u.id=t.user_id
 WHERE  u.id = $1 AND 
@@ -37,9 +38,9 @@ type GetAccessTokenByUserIdPostIdRow struct {
 	PostID_2     string             `db:"post_id_2" json:"post_id_2"`
 	Latitude     float64            `db:"latitude" json:"latitude"`
 	Longitude    float64            `db:"longitude" json:"longitude"`
+	Title        pgtype.Text        `db:"title" json:"title"`
 	CreatedAt_2  pgtype.Timestamp   `db:"created_at_2" json:"created_at_2"`
 	UpdatedAt_2  pgtype.Timestamp   `db:"updated_at_2" json:"updated_at_2"`
-	Title        pgtype.Text        `db:"title" json:"title"`
 	ID_2         string             `db:"id_2" json:"id_2"`
 	CreatedAt_3  pgtype.Timestamptz `db:"created_at_3" json:"created_at_3"`
 	UpdatedAt_3  pgtype.Timestamptz `db:"updated_at_3" json:"updated_at_3"`
@@ -60,12 +61,40 @@ func (q *Queries) GetAccessTokenByUserIdPostId(ctx context.Context, arg GetAcces
 		&i.PostID_2,
 		&i.Latitude,
 		&i.Longitude,
+		&i.Title,
 		&i.CreatedAt_2,
 		&i.UpdatedAt_2,
-		&i.Title,
 		&i.ID_2,
 		&i.CreatedAt_3,
 		&i.UpdatedAt_3,
 	)
 	return i, err
+}
+
+const insertToken = `-- name: InsertToken :execresult
+INSERT INTO tokens (post_id, user_id, access_token, refresh_token, expires_at)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (post_id, user_id) DO UPDATE
+SET
+    access_token = EXCLUDED.access_token,
+    refresh_token = EXCLUDED.refresh_token,
+    expires_at= EXCLUDED.expires_at
+`
+
+type InsertTokenParams struct {
+	PostID       string           `db:"post_id" json:"post_id"`
+	UserID       string           `db:"user_id" json:"user_id"`
+	AccessToken  string           `db:"access_token" json:"access_token"`
+	RefreshToken string           `db:"refresh_token" json:"refresh_token"`
+	ExpiresAt    pgtype.Timestamp `db:"expires_at" json:"expires_at"`
+}
+
+func (q *Queries) InsertToken(ctx context.Context, arg InsertTokenParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, insertToken,
+		arg.PostID,
+		arg.UserID,
+		arg.AccessToken,
+		arg.RefreshToken,
+		arg.ExpiresAt,
+	)
 }
