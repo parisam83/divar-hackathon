@@ -103,6 +103,54 @@ func (p *PageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Requ
 		"RedirectLink": return_url,
 		"PropertyData": property,
 	}
-
 	tmp.Execute(w, data)
+	tmp.ExecuteTemplate(w, "landing.html", data)
+}
+
+func (p *PageHandler) AmenitiesPageHandler(w http.ResponseWriter, r *http.Request) {
+	postToken := r.URL.Query().Get("post_token")
+	latitude := r.URL.Query().Get("latitude")
+	longitude := r.URL.Query().Get("longitude")
+	title := r.URL.Query().Get("title")
+	return_url := r.URL.Query().Get("return_url")
+	log.Println(latitude)
+	log.Println(longitude)
+	log.Println(title)
+
+	if postToken == "" || latitude == "" || longitude == "" || return_url == "" {
+		http.Error(w, "post_token and latitude are longitude", http.StatusBadRequest)
+		return
+	}
+	// Get user ID from context
+	userId, ok := r.Context().Value("user_id").(string)
+	log.Println(userId)
+	log.Println(postToken)
+
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		return
+	}
+	// check if user has privillage?
+	IsOwner, err := p.kenarService.CheckPostOwnership(r.Context(), userId, postToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	if !IsOwner {
+		http.Error(w, "You dont have access to this page because you are not the owner", http.StatusUnauthorized)
+		return
+	}
+	tmp, err := template.ParseFiles("./web/amenities_finder.html")
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	data := map[string]interface{}{
+		"PostToken": postToken,
+		"ReturnUrl": return_url,
+		"Latitude":  latitude,
+		"Longitude": longitude,
+		"Title":     title,
+	}
+	tmp.ExecuteTemplate(w, "amenities_finder.html", data)
 }
