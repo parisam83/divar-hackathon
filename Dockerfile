@@ -20,7 +20,7 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 COPY --from=builder /app/web ./web
-COPY --from=builder /app/pkg/configs ./pkg/configs
+COPY --from=builder /app/internal/configs ./internal/configs
 # COPY --from=builder /app/pkg/database ./pkg/database
 
 
