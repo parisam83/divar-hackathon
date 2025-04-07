@@ -78,6 +78,9 @@
         // These values are injected by the Go template engine
         let divarToken = "{{with .Token}}{{.}}{{else}}{{end}}";
         let redirectLink = "{{with .RedirectLink}}{{.}}{{else}}{{end}}";
+        let title= "{{if .PropertyData.Title}}{{.PropertyData.Title}}{{end}}";
+        let latitude= "{{if .PropertyData.Latitude}}{{.PropertyData.Latitude}}{{else}}null{{end}}";
+        let longitude= "{{if .PropertyData.Longitude}}{{.PropertyData.Longitude}}{{else}}null{{end}}";
 
         // let divarToken = "{{.Token}}"; // Token from Divar
         // let redirectLink = "{{.RedirectLink}}"; // Redirect link from Divar
@@ -152,12 +155,15 @@
             // Service selection handlers - now WITHOUT tokens in URL
             document.getElementById('taxi-service').addEventListener('click', function() {
                 console.log(window.location.origin);
-                window.location.href = '/web/taxi.html';
+                window.location.href = '/web/taxi_seller.html';
 
             });
             
             document.getElementById('subway-service').addEventListener('click', function() {
-                window.location.href = '/web/amenities_finder.html';
+                const url=`/api/serve/amenities-page?post_token=${divarToken}&latitude=${latitude}&longitude=${longitude}&title=${title}&return_url=${redirectLink}`
+                window.location.href = url;
+                return
+                // window.location.href = '/web/amenities_finder.html';
             });
         }
 

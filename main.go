@@ -124,6 +124,7 @@ func (a *App) setupRoutes() {
 	a.router.HandleFunc("/api/add-to-ad", a.handlers.jwt.JWTMiddlewear(a.handlers.kenar.AddLocationWidget))
 	a.router.HandleFunc("/api/get-origin", a.handlers.kenar.GetOriginCoordinates).Methods("POST")
 	a.router.HandleFunc("/oauth/callback", a.handlers.oauth.OauthCallback)
+	a.router.HandleFunc("/api/record-purchase", a.handlers.jwt.JWTMiddlewear(a.handlers.kenar.RecordPurchase))
 
 	// Frontend routes
 	a.router.HandleFunc("/api/seller/landing", a.handlers.page.SellerDashboardHandler).Methods("GET")

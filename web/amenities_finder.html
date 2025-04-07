@@ -433,7 +433,8 @@ html[dir="rtl"] .status-message.info {
         <header>
             <h1>جستجوی امکانات نزدیک</h1>
             <p>نزدیکترین امکانات به ملک خود را پیدا کنید و به آگهی اضافه کنید</p>
-            <a href="./landing.html?source=back" class="back-link">بازگشت به صفحه اصلی</a>
+            <a href="#" class="back-link">بازگشت به صفحه اصلی</a>
+            <!-- <a href="/api/buyer/landing?post_token" class="back-link">بازگشت به صفحه اصلی</a> -->
         </header>
 
         <div class="content-section">
@@ -491,16 +492,49 @@ html[dir="rtl"] .status-message.info {
         const hospitalResultEl = document.querySelector('#nearest-hospital span');
 
         // Get token and redirect URL from query parameters
-        function getTokenFromUrl() {
-            postToken = sessionStorage.getItem('divarToken');
-            redirectLink = sessionStorage.getItem('redirectLink');
-            if (!postToken) {
-                alert("خطا: توکن احراز هویت یافت نشد. لطفا از صفحه اصلی وارد شوید.");
-                window.location.href = './landing.html';
-                return;
-            }
+        // function getTokenFromUrl() {
+        //     postToken = sessionStorage.getItem('divarToken');
+        //     redirectLink = sessionStorage.getItem('redirectLink');
+        //     if (!postToken) {
+        //         alert("خطا: توکن احراز هویت یافت نشد. لطفا از صفحه اصلی وارد شوید.");
+        //         window.location.href = './landing.html';
+        //         return;
+        //     }
     
+        // }
+        function getCoordinatesAndToken() {
+            
+    // These values are injected by Go template engine
+            postToken = "{{with .PostToken}}{{.}}{{else}}{{end}}";;
+            returnUrl ="{{with .ReturnUrl}}{{.}}{{else}}{{end}}"
+            const lat = "{{if .Latitude}}{{.Latitude}}{{else}}null{{end}}";
+            const lng = "{{if .Longitude}}{{.Longitude}}{{else}}null{{end}}";
+            const title="{{if .Title}}{{.Title}}{{end}}";
+            
+            // Validate parameters
+            if (!postToken || !lat || !lng || lat === "" || lng === "" || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
+                throw new Error("خطا: پارامترهای ورودی نامعتبر هستند");
+            }
+            
+            // Store in session if needed
+            sessionStorage.setItem('divarToken', postToken);
+            sessionStorage.setItem('divarToken', postToken);
+            sessionStorage.setItem('propertyLat', lat);
+            sessionStorage.setItem('propertyLng', lng);
+            sessionStorage.setItem('propertyTitle', title);
+            if (returnUrl) {
+                sessionStorage.setItem('redirectLink', returnUrl);
+            }
+            
+            // Return the validated coordinates
+            return {
+                lat: parseFloat(lat),
+                lng: parseFloat(lng),
+                address: title
+            };
         }
+
+
         function updateTopStatus(message, type = 'info', show = true) {
             const statusDiv = document.getElementById('top-status-message');
             statusDiv.textContent = message;
@@ -528,44 +562,44 @@ html[dir="rtl"] .status-message.info {
         }
 
         // Fetch property location using token
-        async function fetchOriginCoordinates() {
-            try {
-                // Call backend API with token to get origin location
-                // In a real app, this would be a fetch to your backend
-                console.log("Fetching origin with token:", postToken);
+        // async function fetchOriginCoordinates() {
+        //     try {
+        //         // Call backend API with token to get origin location
+        //         // In a real app, this would be a fetch to your backend
+        //         console.log("Fetching origin with token:", postToken);
      
                 
-                const response = await fetch('/api/get-origin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ post_token: postToken})
-                });
-                if (response.redirected) {
-                    console.log("Redirect detected to:", response.url);
-                    window.location.href = response.url;
-                    return { ok: false };
-                }
+        //         const response = await fetch('/api/get-origin', {
+        //             method: 'POST',
+        //             headers: { 'Content-Type': 'application/json' },
+        //             body: JSON.stringify({ post_token: postToken})
+        //         });
+        //         if (response.redirected) {
+        //             console.log("Redirect detected to:", response.url);
+        //             window.location.href = response.url;
+        //             return { ok: false };
+        //         }
                 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    if (errorData.redirect) {
-                        window.location.href = errorData.redirect;
-                        return { ok: false };
-                    }
-                    throw new Error('خطا در جستجوی امکانات نزدیک');
-                }
-                const data = await response.json();
-                return {
-                    lat: parseFloat(data.Latitude),
-                    lng: parseFloat(data.Longitude),
-                    address: data.address || "موقعیت ملک شما"
-                };
+        //         if (!response.ok) {
+        //             const errorData = await response.json().catch(() => ({}));
+        //             if (errorData.redirect) {
+        //                 window.location.href = errorData.redirect;
+        //                 return { ok: false };
+        //             }
+        //             throw new Error('خطا در جستجوی امکانات نزدیک');
+        //         }
+        //         const data = await response.json();
+        //         return {
+        //             lat: parseFloat(data.Latitude),
+        //             lng: parseFloat(data.Longitude),
+        //             address: data.address || "موقعیت ملک شما"
+        //         };
 
-            } catch (error) {
-                console.error("Error fetching origin:", error);
-                return null;
-            }
-        }
+        //     } catch (error) {
+        //         console.error("Error fetching origin:", error);
+        //         return null;
+        //     }
+        // }
 
         // Find nearby amenities
         async function findNearbyPlaces(lat, lng) {
@@ -720,7 +754,7 @@ html[dir="rtl"] .status-message.info {
                         
                         const addressElement = document.createElement('div');
                         addressElement.className = 'poi-address';
-                        addressElement.textContent = `آدرس: ${poi.address}`;
+                        addressElement.textContent = `عنوان آگهی: ${poi.address}`;
                         
                         const distanceElement = document.createElement('div');
                         distanceElement.className = 'poi-distance';
@@ -848,7 +882,7 @@ html[dir="rtl"] .status-message.info {
                             approveBtn.disabled = true; 
 
                             if (returnUrl) {
-                                setTimeout(() => window.location.href = returnUrl, 2000);
+                                setTimeout(() => window.location.href = returnUrl, 3000);
                             }
                         } else {
                             throw new Error('Failed to add amenities');
@@ -866,35 +900,66 @@ html[dir="rtl"] .status-message.info {
         // Page initialization
         window.onload = () => {
             console.log("Page loaded. Initializing...");
-            getTokenFromUrl();
+            // getTokenFromUrl();
             updateTopStatus("در حال بارگذاری موقعیت ملک...", 'loading');
+             // Initial state - MOVE THIS TO THE BEGINNING
+            findBtn.disabled = true; // Disabled until origin loads
+            approveBtn.disabled = true;
+            resultsDiv.style.display = 'none';
             
-            fetchOriginCoordinates()
-                .then(originData => {
-                    if (!originData) {
-                        throw new Error("خطا در دریافت موقعیت ملک");
-                    }
-                    origin = originData;
-                    displayOrigin(origin);
-                    findBtn.disabled = false; // Enable button once origin is loaded
-                    updateTopStatus("موقعیت ملک بارگذاری شد. آماده جستجوی امکانات نزدیک.", 'info');
-                })
-                .catch(error => {
-                    console.error("Failed to fetch origin on load:", error);
-                    originAddressEl.textContent = "خطا در بارگذاری موقعیت ملک";
-                    updateTopStatus("خطا در بارگذاری موقعیت ملک. لطفا صفحه را دوباره بارگذاری کنید.", 'error');
-                    findBtn.disabled = true;
-                });
+
+            try {
+                // Get coordinates directly from Go template variables
+                origin = getCoordinatesAndToken();
+                
+                if (!origin) {
+                    throw new Error("خطا در دریافت موقعیت ملک");
+                }
+                
+                displayOrigin(origin);
+                updateBackLink();
+                findBtn.disabled = false; // Enable button since we have the origin
+
+                updateTopStatus("موقعیت ملک بارگذاری شد. آماده جستجوی امکانات نزدیک.", 'info');
+
+            } catch (error) {
+                
+                console.error("Error initializing:", error);
+                originAddressEl.textContent = "خطا در بارگذاری موقعیت ملک";
+                updateTopStatus("خطا در بارگذاری موقعیت ملک: " + error.message, 'error');
+                findBtn.disabled = true;
+            }
 
             // Event Listeners
             findBtn.addEventListener('click', handleFindAmenities);
             approveBtn.addEventListener('click', handleApproval);
 
-            // Initial state
-            findBtn.disabled = true; // Disabled until origin loads
-            approveBtn.disabled = true;
-            resultsDiv.style.display = 'none';
         };
+
+        function updateBackLink() {
+            const backLink = document.querySelector('.back-link');
+            if (backLink) {
+                let href = '/api/seller/landing';
+                
+                const params = new URLSearchParams();
+                
+                if (postToken) {
+                    params.append('post_token', postToken);
+                }
+                
+                if (returnUrl) {
+                    params.append('return_url', returnUrl);
+                }
+                
+                // Set the href with parameters
+                if (params.toString()) {
+                    href += '?' + params.toString();
+                }
+                
+                backLink.href = href;
+                console.log("Updated back link to:", href);
+    }
+}
     </script>
 </body>
 </html>

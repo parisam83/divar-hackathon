@@ -21,7 +21,8 @@
         <header>
             <h1>محاسبه کرایه تاکسی</h1>
             <p>مقصد دلخواه خود را روی نقشه انتخاب کنید</p>
-            <a href="./landing.html?source=back" class="back-link">بازگشت به صفحه اصلی</a>
+            <a href="#" class="back-link">بازگشت به صفحه اصلی</a>
+            <!-- <a href="./landing.html?source=back" class="back-link">بازگشت به صفحه اصلی</a> -->
         </header>
         
         <div class="map-container">
@@ -78,7 +79,30 @@
     let map, originMarker, destinationMarker, routeLine;
     let origin, destination;
     let postToken, redirectLink;
-    
+    function updateBackLink(){
+            const backLink = document.querySelector('.back-link');
+            if (backLink) {
+                let href = '/api/seller/landing';
+                
+                const params = new URLSearchParams();
+                
+                if (postToken) {
+                    params.append('post_token', postToken);
+                }
+                
+                if (redirectLink) {
+                    params.append('return_url', redirectLink);
+                }
+                
+                // Set the href with parameters
+                if (params.toString()) {
+                    href += '?' + params.toString();
+                }
+                
+                backLink.href = href;
+                console.log("Updated back link to:", href);
+    }
+}
     // 2. INITIALIZATION - When page loads
     window.onload = function() {
         postToken = sessionStorage.getItem('divarToken');
@@ -87,9 +111,10 @@
         if (!postToken) {
             alert("خطا: توکن احراز هویت یافت نشد. لطفا از صفحه اصلی وارد شوید.");
         
-            window.location.href = "/web/landing.html?source=back";
+            window.location.href = "https://open-platform-redirect.divar.ir/completion";
             return;
         }
+        updateBackLink()
         initMap();
     };
     

@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/transport"
@@ -227,4 +228,48 @@ func (k *KenarService) fetchPropertyInfoFromDivar(ctx context.Context, postToken
 	}
 	log.Printf("fetched property info from Divar: %+v", propertyInfo)
 	return propertyInfo, nil
+}
+func (k *KenarService) InsertPostPurchase(ctx context.Context, postToken string, userID string) error {
+	result, err := k.queries.InsertPostPurchase(ctx, db.InsertPostPurchaseParams{
+		UserID:    userID,
+		PostToken: postToken,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to record post purchase: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		// this part should never be called actually
+		log.Printf("Purchase record already exists for user %s and post %s",
+			userID, postToken)
+		return fmt.Errorf("purchase record already exists for user %s and post %s",
+			userID, postToken)
+
+	} else {
+		log.Printf("Successfully recorded purchase for user %s and post %s", userID, postToken)
+	}
+	return nil
+
+}
+
+func (k *KenarService) CheckUserPurchase(ctx context.Context, postToken string, userID string) (bool, error) {
+	hasPurchased, err := k.queries.CheckUserPurchase(ctx, db.CheckUserPurchaseParams{
+		UserID:    userID,
+		PostToken: postToken,
+	})
+	if err != nil {
+		return false, fmt.Errorf("could not fetch the realtion of user from post-purchase")
+	}
+	return hasPurchased, nil
+}
+
+func (k *KenarService) CheckPostOwnership(ctx context.Context, userId, postId string) (bool, error) {
+	log.Println("Checking if user is the owner of the post")
+	isOwner, err := k.queries.CheckPostOwnership(ctx, db.CheckPostOwnershipParams{
+		OwnerID: pgtype.Text{String: userId, Valid: true},
+		PostID:  postId,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to get post owner: %w", err)
+	}
+	return isOwner, nil
 }
