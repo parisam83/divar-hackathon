@@ -144,7 +144,7 @@ func (cfg *Config) Validate() error {
 
 func LoadConfig() (*Config, error) {
 	// if os.Getenv("ENV") == "development" {
-		err := godotenv.Load("./pkg/configs/.env")
+		err := godotenv.Load("./internal/configs/.env")
 		if err != nil {
 			log.Printf("Error loading .env file in LoadConfig: %v", err)
 			return nil, err
@@ -153,7 +153,7 @@ func LoadConfig() (*Config, error) {
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./pkg/configs")
+	viper.AddConfigPath("./internal/configs")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
