@@ -35,13 +35,13 @@ func (p *PageHandler) BuyerDashboardHandler(w http.ResponseWriter, r *http.Reque
 
 	if postToken == "" || return_url == "" {
 		log.Printf("post_token and return_url are required")
-		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
+		utils.HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر", "خطا در خواندن اطلاعات درخواست", "post_token and return_url are required")
 		return
 	}
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
 		log.Printf("User ID not found in context")
-		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		utils.HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "کاربر شناسایی نشد", "User ID not found in context")
 		return
 	}
 
@@ -49,12 +49,15 @@ func (p *PageHandler) BuyerDashboardHandler(w http.ResponseWriter, r *http.Reque
 	property, err := p.kenarService.GetPropertyDetail(r.Context(), postToken)
 	if err != nil {
 		log.Printf("Failed to fetch property details: %v", err)
-		http.Error(w, "Failed to fetch property details", http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در پردازش درخواست", err.Error())
 		return
 	}
 
 	hasPurchased, err := p.kenarService.CheckUserPurchase(r.Context(), postToken, userID)
-
+	if err != nil {
+		log.Printf("Failed to check purchase status: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در پردازش درخواست", err.Error())
+	}
 	// Render buyer template with data
 	data := map[string]interface{}{
 		"UserID":       userID,
@@ -66,7 +69,7 @@ func (p *PageHandler) BuyerDashboardHandler(w http.ResponseWriter, r *http.Reque
 	tmp, err := template.ParseFiles("./web/buyer_landing.html")
 	if err != nil {
 		log.Printf("Template error: %v", err)
-		http.Error(w, "Template error", http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در پردازش درخواست", err.Error())
 		return
 	}
 	tmp.ExecuteTemplate(w, "buyer_landing.html", data)
@@ -78,7 +81,7 @@ func (p *PageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Requ
 
 	if postToken == "" || return_url == "" {
 		log.Printf("post_token and return_url are required")
-		http.Error(w, "post_token and return_url are required", http.StatusBadRequest)
+		utils.HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر", "خطا در خواندن اطلاعات درخواست", "post_token and return_url are required")
 		return
 	}
 	_, ok := r.Context().Value("user_id").(string)
@@ -86,24 +89,16 @@ func (p *PageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
-	// IsOwner, err := p.kenarService.CheckPostOwnership(r.Context(), userId, postToken)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// }
-	// if !IsOwner {
-	// 	http.Error(w, "You dont have access to this page because you are not the owner", http.StatusUnauthorized)
-	// 	return
-	// }
 	property, err := p.kenarService.GetPropertyDetail(r.Context(), postToken)
 	if err != nil {
-		http.Error(w, "Failed to fetch property details", http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در پردازش درخواست", err.Error())
 		return
 	}
 
 	tmp, err := template.ParseFiles("./web/landing.html")
 	if err != nil {
 		log.Printf("Template error: %v", err)
-		http.Error(w, "Template error", http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در پردازش درخواست", err.Error())
 		return
 	}
 	data := map[string]interface{}{
@@ -123,28 +118,29 @@ func (p *PageHandler) AmenitiesPageHandler(w http.ResponseWriter, r *http.Reques
 
 	if postToken == "" || latitude == "" || longitude == "" || return_url == "" {
 		log.Printf("post_token, latitude, longitude and return_url are required")
+		utils.HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر", "خطا در خواندن اطلاعات درخواست", "post_token, latitude, longitude and return_url are required")
 		http.Error(w, "post_token and latitude are longitude", http.StatusBadRequest)
 		return
 	}
 	// Get user ID from context
 	userId, ok := r.Context().Value("user_id").(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای احراز هویت", "کاربر شناسایی نشد", "User ID not found in context")
 		return
 	}
 	// check if user has privillage?
 	IsOwner, err := p.kenarService.CheckPostOwnership(r.Context(), userId, postToken)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در پردازش درخواست", err.Error())
 	}
 	if !IsOwner {
-		http.Error(w, "You dont have access to this page because you are not the owner", http.StatusUnauthorized)
+		utils.HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "شما به این صفحه دسترسی ندارید", "You dont have access to this page because you are not the owner")
 		return
 	}
 	tmp, err := template.ParseFiles("./web/amenities_finder.html")
 	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Template error", http.StatusInternalServerError)
+		log.Printf("Template error: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در پردازش درخواست", err.Error())
 		return
 	}
 	data := map[string]interface{}{
