@@ -62,14 +62,13 @@ func (r Row) MarshalJSON() ([]byte, error) {
 }
 
 func (k *KenarService) PostLocationWidget(ctx context.Context, userId string, postToken string, amenities transport.NearbyPOIsResponse) error {
-
-	log.Printf("Posting information widget for post: %s", postToken)
+	log.Printf("/internal/services/PostLocationWidget called for postToken = %s", postToken)
 	token, err := k.queries.GetAccessTokenByUserIdPostId(ctx, db.GetAccessTokenByUserIdPostIdParams{
 		ID:     userId,
 		PostID: postToken,
 	})
 	if err != nil {
-		return fmt.Errorf("could not fetch access token from database")
+		return fmt.Errorf("could not fetch access token from database: %v", err)
 	}
 
 	widgets := []Row{
@@ -172,14 +171,12 @@ func (k *KenarService) PostLocationWidget(ctx context.Context, userId string, po
 		SetBody(jsonData).
 		Post(AddWidgetUrl + postToken)
 	if err != nil {
-		log.Println(err.Error())
 		return fmt.Errorf("failed to post widgets: %w", err)
 	}
 	if resp.IsError() {
 		return fmt.Errorf("failed to set poi information on user's ad: %s", resp.String())
 	}
 	if resp.StatusCode() != http.StatusOK {
-		log.Println(resp.StatusCode())
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
@@ -208,7 +205,6 @@ func (k *KenarService) GetPropertyDetail(ctx context.Context, postToken string) 
 }
 
 func (k *KenarService) fetchPropertyInfoFromDivar(ctx context.Context, postToken string) (*propertyInfo, error) {
-
 	resp, err := k.client.R().SetContext(ctx).Get(GetPostUrl + postToken)
 
 	if err != nil {
