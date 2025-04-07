@@ -9,7 +9,7 @@ import (
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/handlers"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/services"
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/configs"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/transport"

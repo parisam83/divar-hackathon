@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/configs"
 	"github.com/golang-jwt/jwt"
 )
 

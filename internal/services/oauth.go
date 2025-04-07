@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/configs"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"

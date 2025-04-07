@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/configs"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 )

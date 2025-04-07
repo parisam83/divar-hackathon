@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/configs"
+	"git.divar.cloud/divar/girls-hackathon/realestate-poi/internal/configs"
 )
 
 type snappPoint struct {
