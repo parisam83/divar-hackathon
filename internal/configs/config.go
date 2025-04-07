@@ -143,13 +143,13 @@ func (cfg *Config) Validate() error {
 }
 
 func LoadConfig() (*Config, error) {
-	// if os.Getenv("ENV") == "development" {
+	if os.Getenv("ENV") == "development" {
 		err := godotenv.Load("./internal/configs/.env")
 		if err != nil {
 			log.Printf("Error loading .env file in LoadConfig: %v", err)
 			return nil, err
 		}
-	// }
+	}
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -170,7 +170,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	var config Config
-	err = viper.Unmarshal(&config)
+	err := viper.Unmarshal(&config)
 	if err != nil {
 		log.Printf("Error unmarshalling config file: %v", err)
 		return nil, err
