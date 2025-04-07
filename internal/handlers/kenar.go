@@ -132,7 +132,7 @@ func (h *KenarHandler) AddLocationWidget(w http.ResponseWriter, r *http.Request)
 
 	if req.PostToken == "" {
 		log.Printf("missing required fields: post_token")
-		utils.HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر", "فیلدهای ضروری وارد نشده‌اند", "Missing post_token field")
+		utils.HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر","فیلدهای ضروری وارد نشده اند", "Missing post_token field")
 		return
 	}
 
