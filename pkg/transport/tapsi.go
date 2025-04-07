@@ -79,7 +79,6 @@ func NewTapsi(s *configs.TapsiConfig) *Tapsi {
 		clck:         s.Clck,
 		clsk:         s.Clsk,
 	}
-
 }
 
 func (t *Tapsi) GetPriceEstimation(ctx context.Context, stroriginLat, stroriginLong, strdestinationLat, strdestinationLong string) (int, error) {

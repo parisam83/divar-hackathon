@@ -15,6 +15,7 @@ Kenar:
   KenarApiKey: "${KENAR_API_KEY}"
   OauthSecret: "${OAUTH_SECRET}"
   BaseUrl:
+  OpenPlatformApi: "${Open_Platform_Api}"
 
 Server:
   Port: "${PORT}"

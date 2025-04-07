@@ -38,59 +38,6 @@ func (j *JWTManager) CreateJwtToken(userId string) (string, error) {
 
 }
 
-// func (j *JWTManager) JWTMiddlewear(next http.HandlerFunc) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		cookie, err := r.Cookie("Authorization_Token")
-// 		if err != nil {
-// 			if err == http.ErrNoCookie {
-// 				HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "توکن احراز هویت ارائه نشده است", "No token provided")
-// 				return
-// 			}
-// 			HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر", "خطا در خواندن کوکی احراز هویت", err.Error())
-// 			return
-// 		}
-
-// 		// Parse token
-// 		tokenString := cookie.Value
-// 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-// 			// Verify signing method
-// 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-// 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-// 			}
-// 			return j.secretKey, nil
-// 		})
-
-// 		// Handle parsing errors
-// 		if err != nil {
-// 			ve, ok := err.(*jwt.ValidationError)
-// 			if ok {
-// 				if ve.Errors&jwt.ValidationErrorExpired != 0 {
-// 					HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "توکن منقضی شده است. لطفا مجدد وارد شوید", "Token expired")
-// 					return
-// 				}
-// 				log.Println("here")
-// 				HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "توکن نامعتبر است", err.Error())
-// 				return
-// 			}
-// 			HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "توکن نامعتبر است", err.Error())
-// 			return
-// 		}
-// 		if !token.Valid {
-// 			HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "توکن نامعتبر است", "Invalid token")
-// 			return
-// 		}
-
-// 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-// 			ctx := context.WithValue(r.Context(), "user_id", claims["user_id"])
-// 			next(w, r.WithContext(ctx))
-// 		} else {
-// 			HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "توکن نامعتبر است", "Invalid token claims")
-// 		}
-
-// 	}
-
-// }
-
 func (j *JWTManager) JWTMiddlewear(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check if it's an AJAX request

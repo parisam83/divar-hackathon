@@ -86,7 +86,7 @@ func (h *SessionStore) SaveSession(w http.ResponseWriter, r *http.Request, sessi
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
-	log.Println("new session saved successfully")
+	log.Printf("Session saved succesfully: %+v", session)
 	return session, nil
 
 }

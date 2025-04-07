@@ -26,7 +26,7 @@ func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
 	return &KenarService{
 		apiKey:  apiKey,
 		client:  resty.New().SetHeader("Content-Type", "application/json").SetHeader("X-Api-Key", apiKey),
-		domain:  domain, //https://api.divar.ir/v1/open-platform
+		domain:  domain, 
 		queries: queries,
 	}
 }
@@ -62,14 +62,13 @@ func (r Row) MarshalJSON() ([]byte, error) {
 }
 
 func (k *KenarService) PostLocationWidget(ctx context.Context, userId string, postToken string, amenities transport.NearbyPOIsResponse) error {
-
-	log.Printf("Posting information widget for post: %s", postToken)
+	log.Printf("/internal/services/PostLocationWidget called for postToken = %s", postToken)
 	token, err := k.queries.GetAccessTokenByUserIdPostId(ctx, db.GetAccessTokenByUserIdPostIdParams{
 		ID:     userId,
 		PostID: postToken,
 	})
 	if err != nil {
-		return fmt.Errorf("could not fetch access token from database")
+		return fmt.Errorf("could not fetch access token from database: %v", err)
 	}
 
 	widgets := []Row{
@@ -172,22 +171,20 @@ func (k *KenarService) PostLocationWidget(ctx context.Context, userId string, po
 		SetBody(jsonData).
 		Post(AddWidgetUrl + postToken)
 	if err != nil {
-		log.Println(err.Error())
 		return fmt.Errorf("failed to post widgets: %w", err)
 	}
 	if resp.IsError() {
 		return fmt.Errorf("failed to set poi information on user's ad: %s", resp.String())
 	}
 	if resp.StatusCode() != http.StatusOK {
-		log.Println(resp.StatusCode())
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
 	return nil
 }
 
-func (k *KenarService) GetPropertyDetail(postToken string) (*propertyInfo, error) {
-	post, err := k.queries.GetPost(context.Background(), postToken)
+func (k *KenarService) GetPropertyDetail(ctx context.Context, postToken string) (*propertyInfo, error) {
+	post, err := k.queries.GetPost(ctx, postToken)
 	if err == nil {
 		log.Printf("Post %s found in database: location (lat: %f, lng: %f)", postToken, post.Latitude, post.Longitude)
 		return &propertyInfo{
@@ -200,16 +197,15 @@ func (k *KenarService) GetPropertyDetail(postToken string) (*propertyInfo, error
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query property detail from database: %w", err)
 	}
-	propertyInfo, err := k.fetchPropertyInfoFromDivar(postToken)
+	propertyInfo, err := k.fetchPropertyInfoFromDivar(ctx, postToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch property info: %w", err)
 	}
 	return propertyInfo, nil
 }
 
-func (k *KenarService) fetchPropertyInfoFromDivar(postToken string) (*propertyInfo, error) {
-
-	resp, err := k.client.R().Get(GetPostUrl + postToken)
+func (k *KenarService) fetchPropertyInfoFromDivar(ctx context.Context, postToken string) (*propertyInfo, error) {
+	resp, err := k.client.R().SetContext(ctx).Get(GetPostUrl + postToken)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch property request %w", err)

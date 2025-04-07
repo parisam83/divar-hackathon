@@ -68,6 +68,7 @@ type Poi struct {
 
 type Post struct {
 	PostID    string           `db:"post_id" json:"post_id"`
+	OwnerID   pgtype.Text      `db:"owner_id" json:"owner_id"`
 	Latitude  float64          `db:"latitude" json:"latitude"`
 	Longitude float64          `db:"longitude" json:"longitude"`
 	Title     pgtype.Text      `db:"title" json:"title"`

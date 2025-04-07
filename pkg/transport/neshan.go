@@ -108,7 +108,6 @@ func NewNeshan(s *configs.NeshanConfig) *Neshan {
 	return &Neshan{
 		apiKey: s.NeshanApiKey,
 	}
-
 }
 
 const (
@@ -118,49 +117,6 @@ const (
 	supermarketUrlEncoded = "%D8%B3%D9%88%D9%BE%D8%B1%D9%85%D8%A7%D8%B1%DA%A9%D8%AA"
 	fruitMarketUrlEncoded = "%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1%20%D9%85%DB%8C%D9%88%D9%87"
 )
-
-// func (n *Neshan) GetSearchResult(startLat, startLong float64) ([]Items, error) {
-// 	searchURL := fmt.Sprintf(searchApi, "%D9%85%D8%AA%D8%B1%D9%88", startLat, startLong)
-// 	req, err := http.NewRequest("GET", searchURL, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	req.Header.Set("Api-Key", n.apiKey)
-// 	client := &http.Client{}
-
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != http.StatusOK {
-// 		return nil, fmt.Errorf("error: %s", resp.Status)
-// 	}
-
-// 	var searchResult SearchResult
-// 	if err := json.NewDecoder(resp.Body).Decode(&searchResult); err != nil {
-// 		return nil, err
-// 	}
-
-// 	if len(searchResult.Items) == 0 {
-// 		return nil, fmt.Errorf("no station found")
-// 	}
-
-// 	var nearbyStations []Items
-// 	for _, item := range searchResult.Items {
-// 		if distance(startLat, startLong, item.Location.Y, item.Location.X) <= 4 {
-// 			nearbyStations = append(nearbyStations, item)
-// 		}
-// 	}
-
-// 	if len(nearbyStations) == 0 {
-// 		return nil, fmt.Errorf("no station found within 4 km radius")
-// 	}
-
-// 	return nearbyStations, nil
-// }
 
 func (n *Neshan) GetDirectionResult(origin, destination string) (DirectionResult, error) {
 	directionUrl := fmt.Sprintf(directionApi, origin, destination)
@@ -283,58 +239,6 @@ func (n *Neshan) GetSearchResult(startLat, startLong float64, poiType string) ([
 
 	return nearbyPOIs, nil
 }
-
-// func (n *Neshan) GetSubwayStation(startLatstr, startLongstr string) (*StationResponse, error) {
-// 	if startLatstr == "" || startLongstr == "" {
-// 		return nil, fmt.Errorf("startLat and startLong are required")
-// 	}
-// 	startLat, err := strconv.ParseFloat(startLatstr, 64)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("invalid startLat parameter")
-// 	}
-
-// 	startLong, err := strconv.ParseFloat(startLongstr, 64)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("invalid startLong parameter")
-// 	}
-
-// 	nearbyStations, err := n.GetSearchResult(startLat, startLong)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	log.Println(nearbyStations)
-
-// 	closest := nearbyStations[1]
-// 	stationLat := closest.Location.Y
-// 	stationLong := closest.Location.X
-// 	origin := fmt.Sprintf("%f", startLat) + "," + fmt.Sprintf("%f", startLong)
-// 	destination := fmt.Sprintf("%f", closest.Location.Y) + "," + fmt.Sprintf("%f", closest.Location.X)
-
-// 	directionResult, err := n.GetDirectionResult(origin, destination)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	totalDuration := PersianToEnglishNumerals(strings.Split(directionResult.Route[0].Legs[0].Duration.Text, " ")[0])
-
-// 	distanceParts := strings.Split(directionResult.Route[0].Legs[0].Distance.Text, " ")
-// 	distanceValue := PersianToEnglishNumerals(distanceParts[0])
-// 	distanceUnit := distanceParts[1]
-
-// 	totalDistance, err := convertToMeters(distanceValue, distanceUnit)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("error converting distance: %v", err)
-// 	}
-
-// 	response := &StationResponse{
-// 		ClosestStation: closest.Title,
-// 		StationLat:     stationLat,
-// 		StationLong:    stationLong,
-// 		TotalDuration:  totalDuration,
-// 		TotalDistance:  totalDistance,
-// 	}
-// 	return response, nil
-// }
 
 func (n *Neshan) findNearestPOI(startLat, startLong float64, poiType string, limit int) (*POICategory, error) {
 	// Get nearby POIs

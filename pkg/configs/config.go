@@ -30,7 +30,9 @@ type KenarConfig struct {
 	ApiKey      string `mapstructure:"KenarApiKey"`
 	OauthSecret string `mapstructure:"OauthSecret"`
 	BaseURL     string `mapstructure:"BaseUrl"`
+	OpenPlatformApi string `mapstructure:"OpenPlatformApi"`
 }
+
 type ServerConfig struct {
 	Port string `mapstructure:"Port"`
 }
@@ -77,11 +79,67 @@ type TapsiConfig struct {
 }
 
 func (cfg *KenarConfig) Validate() error {
-
-	if cfg.AppSlug == "" || cfg.OauthSecret == "" {
+	if cfg.AppSlug == "" || cfg.OauthSecret == "" || cfg.OpenPlatformApi == "" {
 		return fmt.Errorf("missing required OAuth configurations")
 	}
 	return nil
+}
+
+func (cfg *Config) Validate() error {
+	// Database validation
+    if cfg.Database.Host == "" {
+        return fmt.Errorf("database host is empty")
+    }
+    if cfg.Database.Port == 0 {
+        return fmt.Errorf("database port is zero")
+    }
+    if cfg.Database.Username == "" {
+        return fmt.Errorf("database username is empty")
+    }
+    if cfg.Database.Password == "" {
+        return fmt.Errorf("database password is empty")
+    }
+    if cfg.Database.DBName == "" {
+        return fmt.Errorf("database name is empty")
+    }
+
+	// TODO: Clean this part
+    // Kenar validation
+    if err := cfg.Kenar.Validate(); err != nil {
+        return fmt.Errorf("kenar config validation failed: %w", err)
+    }
+
+    // Server validation
+    if cfg.Server.Port == "" {
+        return fmt.Errorf("server port is empty")
+    }
+
+    // Session validation
+    if cfg.Session.AuthKey == "" {
+        return fmt.Errorf("session auth key is empty")
+    }
+
+    // JWT validation
+    if cfg.Jwt.JwtSecret == "" {
+        return fmt.Errorf("jwt secret is empty")
+    }
+
+    // Neshan validation
+    if cfg.Neshan.NeshanApiKey == "" {
+        return fmt.Errorf("neshan api key is empty")
+    }
+
+    // Snapp validation
+    if cfg.Snapp.ApiKey == "" {
+        return fmt.Errorf("snapp api key is empty")
+    }
+
+    // Tapsi validation
+    if cfg.Tapsi.AccessToken == "" {
+        return fmt.Errorf("tapsi access token is empty")
+    }
+
+    return nil
 }
 
 func LoadConfig() (*Config, error) {
@@ -104,6 +162,7 @@ func LoadConfig() (*Config, error) {
 		log.Printf("Error reading config file: %v", err)
 		return nil, err
 	}
+
 	for _, key := range viper.AllKeys() {
 		value := viper.GetString(key)
 		expanded := os.ExpandEnv(value)
@@ -113,9 +172,15 @@ func LoadConfig() (*Config, error) {
 	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		log.Printf("Error unmarshalling config: %v", err)
+		log.Printf("Error unmarshalling config file: %v", err)
 		return nil, err
 	}
+
+	// Validate the configuration
+    if err := config.Validate(); err != nil {
+        log.Printf("Configuration validation failed: %v", err)
+        return nil, err
+    }
 
 	// log.Printf("Config Loaded: %+v", config)
 	return &config, nil

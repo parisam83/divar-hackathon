@@ -24,13 +24,12 @@ func HanleError(w http.ResponseWriter, r *http.Request, statusCode int, message 
 		url.QueryEscape(description),
 		url.QueryEscape(technicalError),
 	)
-	log.Println("27 error handler.go")
+	log.Printf("Redirecting to error page: %s", errorURL)
 	http.Redirect(w, r, errorURL, http.StatusSeeOther)
-	return
 }
 
 func RenderErrorPage(w http.ResponseWriter, r *http.Request) {
-	log.Println("Rendering")
+	log.Printf("Rendering Error Page")
 	statusCodestr := r.URL.Query().Get("code")
 	message := r.URL.Query().Get("message")
 	description := r.URL.Query().Get("description")
@@ -67,7 +66,7 @@ func RenderErrorPage(w http.ResponseWriter, r *http.Request) {
 
 	errorTemplate, err := template.ParseFiles("./web/error.html")
 	if err != nil {
-		log.Println("could not parse error html" + err.Error())
+		log.Printf("could not parse error html: %v", err)
 		return
 	}
 
@@ -76,6 +75,5 @@ func RenderErrorPage(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error rendering error template: %v", err)
 		http.Error(w, "خطا در نمایش صفحه: "+message, http.StatusInternalServerError)
 	}
-	log.Println("79 error")
-	return
+	log.Printf("Error page rendered successfully")
 }

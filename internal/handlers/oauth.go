@@ -24,22 +24,15 @@ type Scope struct {
 	resourceID   string
 }
 
-type oAuthHandler struct {
+type OAuthHandler struct {
 	oauthService *services.OAuthService
 	kenarService *services.KenarService
 	store        *utils.SessionStore
 	jwt          *utils.JWTManager
 }
 
-func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService, jwt *utils.JWTManager) *oAuthHandler {
-	if store == nil {
-		log.Fatal("cookie store can not be nil")
-	}
-	if serv == nil {
-		log.Fatal("oauth service can not be nil")
-	}
-
-	return &oAuthHandler{
+func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService, jwt *utils.JWTManager) *OAuthHandler {
+	return &OAuthHandler{
 		store:        store,
 		oauthService: serv,
 		kenarService: kenar,
@@ -47,11 +40,21 @@ func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, ken
 	}
 }
 
-func (h *oAuthHandler) buildScopes(postToken string) []string {
-	oauthScopes := []Scope{
-		{resourceType: POST_ADDON_CREATE, resourceID: postToken},
-		{resourceType: USER_ID},
-		{resourceType: OFFLINE_ACCESS},
+func (h *OAuthHandler) buildScopes(postToken string, isBuyer bool) []string {
+	var oauthScopes []Scope
+
+	if isBuyer {
+		// For buyers, only include USER_ID scope
+		oauthScopes = []Scope{
+			{resourceType: USER_ID},
+		}
+	} else {
+		// For non-buyers, include all scopes
+		oauthScopes = []Scope{
+			{resourceType: POST_ADDON_CREATE, resourceID: postToken},
+			{resourceType: USER_ID},
+			{resourceType: OFFLINE_ACCESS},
+		}
 	}
 
 	var scopes []string
@@ -65,46 +68,49 @@ func (h *oAuthHandler) buildScopes(postToken string) []string {
 	return scopes
 }
 
-func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
-	log.Println("AddonOauth called")
+func (h *OAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
+	log.Printf("internal/handlers/AddonOauth called")
 
 	postToken := r.URL.Query().Get("post_token")
 	return_url := r.URL.Query().Get("return_url")
-	log.Println("return_url: ", return_url)
+
 	isBuyer := return_url == ""
+
 	if postToken == "" {
-		http.Error(w, "post_token is required", http.StatusBadRequest)
+		log.Printf("post_token is required")
+		utils.HanleError(w, r, http.StatusBadRequest, "خطا در پردازش درخواست", "عدم دریافت لینک آگهی", "post_token is required")
 		return
 	}
+
 	session, err := h.store.GetExistingSession(w, r)
-	if err != nil || session.PostToken != postToken {
-		log.Println("new person. new post!")
+	if err != nil || session.PostToken != postToken || session.IsBuyer != isBuyer {
+		log.Printf("session not found or post_token mismatch or isBuyer mismatch")
 		session, err = h.store.CreateNewSession(w, r, postToken, return_url, isBuyer)
 		if err != nil {
-			http.Error(w, "Failed to create session: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("Failed to create new session: %v", err)
+			utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در ایجاد سشن", err.Error())
 			return
 		}
 	}
-	// creating scopes
-	scopes := h.buildScopes(postToken)
+
+	scopes := h.buildScopes(postToken, isBuyer)
 	redirect_url := h.oauthService.GenerateAuthURL(scopes, session.State)
 	http.Redirect(w, r, redirect_url, http.StatusFound)
-
 }
 
-// call back
-func (h *oAuthHandler) validateCallback(r *http.Request) (string, string, error) {
-
+func (h *OAuthHandler) validateCallback(r *http.Request) (string, string, error) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	if code == "" || state == "" {
+		log.Printf("code and state are required")
 		return "", "", fmt.Errorf("code and state are required")
 	}
 	return code, state, nil
 }
 
-func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
-	log.Println("OauthCallback called")
+func (h *OAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
+	log.Printf("internal/handlers/OauthCallback called")
+
 	code, state, err := h.validateCallback(r)
 	if err != nil {
 		log.Printf("Invalid callback parameters: %v", err)
@@ -112,61 +118,79 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//get existing session
 	session, err := h.store.GetExistingSession(w, r)
 	if err != nil {
-		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Failed to get session: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در دریافت سشن", err.Error())
 		return
 	}
 
 	//check if state is the same as the one in the session
 	if session.State != state {
-		http.Error(w, "Invalid state", http.StatusBadRequest)
+		log.Printf("Invalid state: %s", state)
+		utils.HanleError(w, r, http.StatusBadRequest, "خطا در پردازش درخواست", "عدم مطابقت استیت سشن", "Invalid state")
 		return
 	}
+
 	//sending code to get the token
 	token, err := h.oauthService.ExchangeToken(r.Context(), code)
 	if err != nil {
-		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Failed to exchange token: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در دریافت توکن", err.Error())
 		return
 	}
+
 	userDetail, err := h.kenarService.GetUserDetail(token.AccessToken)
 	if err != nil {
+		log.Printf("Failed to get user information: %v", err)
 		utils.HanleError(w, r, http.StatusInternalServerError,
 			"خطا در دریافت اطلاعات کاربری",
 			"امکان دریافت اطلاعات شما وجود ندارد. لطفا بعدا تلاش کنید", err.Error())
 		return
 	}
-	// if err != nil {
-	// 	http.Error(w, "Failed to get user information: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
 
-	properyDetail, err := h.kenarService.GetPropertyDetail(session.PostToken)
+	properyDetail, err := h.kenarService.GetPropertyDetail(r.Context(), session.PostToken)
 	if err != nil {
-		http.Error(w, "Failed to get coordinates: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Failed to get coordinates: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در دریافت اطلاعات آگهی", err.Error())
 		return
 	}
 
-	err = h.oauthService.RegisterAuthData(r.Context(), &services.Transaction{
+	// Check if the user is the owner of this post
+	_, err = h.oauthService.IsUserPostOwner(r.Context(), userDetail.UserId, session.PostToken)
+	if err != nil {
+		log.Printf("Error checking post ownership: %v", err)
+		// Continue even if we can't check ownership
+	}
+
+	transactionData := &services.Transaction{
 		PropertyDetail: properyDetail,
 		UserDetail:     userDetail,
-		TokenInfo: &services.TokenInfo{
+		IsBuyer:        session.IsBuyer,
+	}
+
+	// Only include token info for  (sellers)
+	if !session.IsBuyer {
+		transactionData.TokenInfo = &services.TokenInfo{
 			RefreshToken: token.RefreshToken,
 			AccessToken:  token.AccessToken,
 			ExpiresIn:    token.Expiry,
-		},
-	})
+		}
+	}
+
+	err = h.oauthService.RegisterAuthData(r.Context(), transactionData)
 	if err != nil {
-		http.Error(w, "Failed to register auth data: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Failed to register auth data: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در ثبت اطلاعات", err.Error())
 		return
 	}
-	log.Println("HERE I AMMMMMMMMMMMMM")
 	jwtToken, err := h.jwt.CreateJwtToken(userDetail.UserId)
 	if err != nil {
-		http.Error(w, "Error creating jwt token", http.StatusInternalServerError)
+		log.Printf("Error creating jwt token: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "jwt خطا در ایجاد توکن", err.Error())
 		return
 	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "Authorization_Token",
 		Value:    jwtToken,
@@ -174,9 +198,12 @@ func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   86400,
 	})
-	log.Println("THe problem sets here\n")
 
-	url := fmt.Sprintf("https://oryx-meet-elf.ngrok-free.app/api/main?post_token=%s&return_url=%s", session.PostToken, session.ReturnUrl)
+	var url string
+	if session.IsBuyer {
+		url = fmt.Sprintf("/api/buyer/landing?post_token=%s&return_url=%s", session.PostToken, "https://open-platform-redirect.divar.ir/completion")
+	} else {
+		url = fmt.Sprintf("/api/seller/landing?post_token=%s&return_url=%s", session.PostToken, session.ReturnUrl)
+	}
 	http.Redirect(w, r, url, http.StatusSeeOther)
-
 }

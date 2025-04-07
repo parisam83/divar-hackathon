@@ -1,7 +1,7 @@
 -- Create the posts table
 CREATE TABLE posts (
     post_id VARCHAR(255) PRIMARY KEY,
-    -- user_id VARCHAR(255) NOT NULL,
+    owner_id VARCHAR REFERENCES users(id),
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     title VARCHAR(255),
