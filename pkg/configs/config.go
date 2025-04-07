@@ -85,12 +85,13 @@ func (cfg *KenarConfig) Validate() error {
 }
 
 func LoadConfig() (*Config, error) {
-	if os.Getenv("ENV") == "development" {
+	// if os.Getenv("ENV") == "development" {
 		err := godotenv.Load("./pkg/configs/.env")
 		if err != nil {
 			log.Printf("Error loading .env file in LoadConfig" + err.Error())
+			return nil, err
 		}
-	}
+	// }
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -101,21 +102,22 @@ func LoadConfig() (*Config, error) {
 	// check if config file is not provided
 	if err := viper.ReadInConfig(); err != nil {
 		log.Printf("Error reading config file")
+		return nil, err
 	}
+
 	for _, key := range viper.AllKeys() {
-		// log.Println(key)
 		value := viper.GetString(key)
 		expanded := os.ExpandEnv(value)
-		// log.Println(key)
-		// log.Println(value)
 		viper.Set(key, expanded)
 	}
 
 	var config Config
-	err := viper.Unmarshal(&config)
+	err = viper.Unmarshal(&config)
 	if err != nil {
+		log.Printf("Error unmarshalling config file: %v", err)
 		return nil, err
 	}
+
 	// log.Printf("Config Loaded: %+v", config)
 	return &config, nil
 }
