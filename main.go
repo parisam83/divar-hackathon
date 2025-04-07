@@ -24,20 +24,7 @@ func main() {
 		log.Fatalf("failed to load configurations: %v\n", err)
 	}
 
-	conPool, err := database.ConnectToDatabase(
-		context.Background(),
-		conf.Database.Username,
-		conf.Database.Password,
-		conf.Database.Host,
-		conf.Database.DBName,
-		conf.Database.Port,
-		conf.Database.SSLMode,
-		conf.Database.MaxConns,
-		conf.Database.MinConns,
-		conf.Database.MaxConnLifetimeJitterMinutes,
-		conf.Database.MaxConnLifetimeMinutes,
-		conf.Database.MaxConnIdleTimeMinutes,
-	)
+	conPool, err := database.ConnectToDatabase(context.Background(), conf.Database)
 	if err != nil {
 		log.Fatalf("Error in databse setup: %v", err)
 	}
