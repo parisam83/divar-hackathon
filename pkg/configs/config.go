@@ -84,6 +84,63 @@ func (cfg *KenarConfig) Validate() error {
 	return nil
 }
 
+func (cfg *Config) Validate() error {
+	// Database validation
+    if cfg.Database.Host == "" {
+        return fmt.Errorf("database host is empty")
+    }
+    if cfg.Database.Port == 0 {
+        return fmt.Errorf("database port is zero")
+    }
+    if cfg.Database.Username == "" {
+        return fmt.Errorf("database username is empty")
+    }
+    if cfg.Database.Password == "" {
+        return fmt.Errorf("database password is empty")
+    }
+    if cfg.Database.DBName == "" {
+        return fmt.Errorf("database name is empty")
+    }
+
+	// TODO: Clean this part
+    // Kenar validation
+    if err := cfg.Kenar.Validate(); err != nil {
+        return fmt.Errorf("kenar config validation failed: %w", err)
+    }
+
+    // Server validation
+    if cfg.Server.Port == "" {
+        return fmt.Errorf("server port is empty")
+    }
+
+    // Session validation
+    if cfg.Session.AuthKey == "" {
+        return fmt.Errorf("session auth key is empty")
+    }
+
+    // JWT validation
+    if cfg.Jwt.JwtSecret == "" {
+        return fmt.Errorf("jwt secret is empty")
+    }
+
+    // Neshan validation
+    if cfg.Neshan.NeshanApiKey == "" {
+        return fmt.Errorf("neshan api key is empty")
+    }
+
+    // Snapp validation
+    if cfg.Snapp.ApiKey == "" {
+        return fmt.Errorf("snapp api key is empty")
+    }
+
+    // Tapsi validation
+    if cfg.Tapsi.AccessToken == "" {
+        return fmt.Errorf("tapsi access token is empty")
+    }
+
+    return nil
+}
+
 func LoadConfig() (*Config, error) {
 	// if os.Getenv("ENV") == "development" {
 		err := godotenv.Load("./pkg/configs/.env")
@@ -117,6 +174,12 @@ func LoadConfig() (*Config, error) {
 		log.Printf("Error unmarshalling config: %v", err)
 		return nil, err
 	}
+
+	// Validate the configuration
+    if err := config.Validate(); err != nil {
+        log.Printf("Configuration validation failed: %v", err)
+        return nil, err
+    }
 
 	// log.Printf("Config Loaded: %+v", config)
 	return &config, nil
