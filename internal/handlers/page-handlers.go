@@ -86,7 +86,7 @@ func (p *PageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Requ
 	}
 	_, ok := r.Context().Value("user_id").(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		utils.HanleError(w, r, http.StatusUnauthorized, "خطای احراز هویت", "کاربر شناسایی نشد", "User ID not found in context")
 		return
 	}
 	property, err := p.kenarService.GetPropertyDetail(r.Context(), postToken)
@@ -119,7 +119,6 @@ func (p *PageHandler) AmenitiesPageHandler(w http.ResponseWriter, r *http.Reques
 	if postToken == "" || latitude == "" || longitude == "" || return_url == "" {
 		log.Printf("post_token, latitude, longitude and return_url are required")
 		utils.HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر", "خطا در خواندن اطلاعات درخواست", "post_token, latitude, longitude and return_url are required")
-		http.Error(w, "post_token and latitude are longitude", http.StatusBadRequest)
 		return
 	}
 	// Get user ID from context
