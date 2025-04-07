@@ -102,13 +102,14 @@ func (k *KenarHandler) Poi(w http.ResponseWriter, r *http.Request) {
 	stationResult, err := k.transportService.FindNearestStation(r.Context(), userId, req.PostToken, strconv.FormatFloat(req.Latitude, 'f', -1, 64), strconv.FormatFloat(req.Longitude, 'f', -1, 64))
 	if err != nil {
 		log.Printf("failed to find nearest station: %v", err)
-		http.Error(w, "failed to find nearest station: "+err.Error(), http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در پیدا کردن ایستگاه", err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(stationResult); err != nil {
-		http.Error(w, "failed to encode response: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("failed to encode response: %v", err)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در تولید پاسخ", err.Error())
 		return
 	}
 }
