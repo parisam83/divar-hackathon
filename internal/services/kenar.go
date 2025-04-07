@@ -27,7 +27,7 @@ func NewKenarService(apiKey, domain string, queries *db.Queries) *KenarService {
 	return &KenarService{
 		apiKey:  apiKey,
 		client:  resty.New().SetHeader("Content-Type", "application/json").SetHeader("X-Api-Key", apiKey),
-		domain:  domain, //https://api.divar.ir/v1/open-platform
+		domain:  domain, 
 		queries: queries,
 	}
 }

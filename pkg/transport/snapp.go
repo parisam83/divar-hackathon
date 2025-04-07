@@ -62,7 +62,6 @@ func NewSnapp(s *configs.SnappConfig) *Snapp {
 		ga_Y4QV007ERR:  s.GATracking,
 		ga:             s.GA,
 	}
-
 }
 
 func (s *Snapp) GetPriceEstimation(ctx context.Context, originLat, originLong, destinationLat, destinationLong string) (int, error) {

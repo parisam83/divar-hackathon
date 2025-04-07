@@ -24,14 +24,14 @@ type Scope struct {
 	resourceID   string
 }
 
-type oAuthHandler struct {
+type OAuthHandler struct {
 	oauthService *services.OAuthService
 	kenarService *services.KenarService
 	store        *utils.SessionStore
 	jwt          *utils.JWTManager
 }
 
-func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService, jwt *utils.JWTManager) *oAuthHandler {
+func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService, jwt *utils.JWTManager) *OAuthHandler {
 	if store == nil {
 		log.Fatal("cookie store can not be nil")
 	}
@@ -39,7 +39,7 @@ func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, ken
 		log.Fatal("oauth service can not be nil")
 	}
 
-	return &oAuthHandler{
+	return &OAuthHandler{
 		store:        store,
 		oauthService: serv,
 		kenarService: kenar,
@@ -47,7 +47,7 @@ func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, ken
 	}
 }
 
-func (h *oAuthHandler) buildScopes(postToken string, isBuyer bool) []string {
+func (h *OAuthHandler) buildScopes(postToken string, isBuyer bool) []string {
 	var oauthScopes []Scope
 
 	if isBuyer {
@@ -93,7 +93,7 @@ func (h *oAuthHandler) buildScopes(postToken string, isBuyer bool) []string {
 // 	return scopes
 // }
 
-func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
+func (h *OAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 	log.Println("AddonOauth called")
 
 	postToken := r.URL.Query().Get("post_token")
@@ -122,7 +122,7 @@ func (h *oAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 }
 
 // call back
-func (h *oAuthHandler) validateCallback(r *http.Request) (string, string, error) {
+func (h *OAuthHandler) validateCallback(r *http.Request) (string, string, error) {
 
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
@@ -132,7 +132,7 @@ func (h *oAuthHandler) validateCallback(r *http.Request) (string, string, error)
 	return code, state, nil
 }
 
-func (h *oAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
+func (h *OAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	log.Println("OauthCallback called")
 	code, state, err := h.validateCallback(r)
 	if err != nil {

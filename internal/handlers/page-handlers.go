@@ -9,7 +9,7 @@ import (
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/utils"
 )
 
-type pageHandler struct {
+type PageHandler struct {
 	sessionStore *utils.SessionStore
 	kenarService *services.KenarService
 	taxiService  *services.TransportService
@@ -19,14 +19,14 @@ func NewPageHandler(
 	sessionStore *utils.SessionStore,
 	kenarService *services.KenarService,
 	taxiService *services.TransportService,
-) *pageHandler {
-	return &pageHandler{
+) *PageHandler {
+	return &PageHandler{
 		sessionStore: sessionStore,
 		kenarService: kenarService,
 		taxiService:  taxiService,
 	}
 }
-func (p *pageHandler) BuyerDashboardHandler(w http.ResponseWriter, r *http.Request) {
+func (p *PageHandler) BuyerDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	postToken := r.URL.Query().Get("post_token")
 	return_url := r.URL.Query().Get("return_url")
 
@@ -64,7 +64,7 @@ func (p *pageHandler) BuyerDashboardHandler(w http.ResponseWriter, r *http.Reque
 	tmp.ExecuteTemplate(w, "buyer_landing.html", data)
 	return
 }
-func (p *pageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Request) {
+func (p *PageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	postToken := r.URL.Query().Get("post_token")
 	return_url := r.URL.Query().Get("return_url")
 
@@ -97,7 +97,7 @@ func (p *pageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Requ
 	return
 }
 
-func (p *pageHandler) AmenitiesPageHandler(w http.ResponseWriter, r *http.Request) {
+func (p *PageHandler) AmenitiesPageHandler(w http.ResponseWriter, r *http.Request) {
 	postToken := r.URL.Query().Get("post_token")
 	latitude := r.URL.Query().Get("latitude")
 	longitude := r.URL.Query().Get("longitude")
