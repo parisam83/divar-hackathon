@@ -22,7 +22,6 @@ type App struct {
 	router     *mux.Router
 	config     *configs.Config
 	dbConn     *pgxpool.Pool
-	httpServer *http.Server
 	handlers   *appHandlers
 	services   *appServices
 }
@@ -31,6 +30,7 @@ type appServices struct {
 	kenarService *services.KenarService
 	oauthService *services.OAuthService
 }
+
 type appHandlers struct {
 	kenar *handlers.KenarHandler
 	oauth *handlers.OAuthHandler
