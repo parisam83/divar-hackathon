@@ -93,6 +93,5 @@ func (p *PageHandler) SellerDashboardHandler(w http.ResponseWriter, r *http.Requ
 		RedirectLink: return_url,
 	}
 
-	log.Printf("Redirecting to landing page with post_token: %s", postToken)
 	tmp.Execute(w, data)
 }
