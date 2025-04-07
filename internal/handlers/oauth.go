@@ -32,13 +32,6 @@ type OAuthHandler struct {
 }
 
 func NewOAuthHandler(store *utils.SessionStore, serv *services.OAuthService, kenar *services.KenarService, jwt *utils.JWTManager) *OAuthHandler {
-	if store == nil {
-		log.Printf("cookie store can not be nil")
-	}
-	if serv == nil {
-		log.Printf("oauth service can not be nil")
-	}
-
 	return &OAuthHandler{
 		store:        store,
 		oauthService: serv,
@@ -85,7 +78,7 @@ func (h *OAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 
 	if postToken == "" {
 		log.Printf("post_token is required")
-		http.Error(w, "post_token is required", http.StatusBadRequest)
+		utils.HanleError(w, r, http.StatusBadRequest, "خطا در پردازش درخواست", "عدم دریافت لینک آگهی", "post_token is required")
 		return
 	}
 
@@ -95,7 +88,7 @@ func (h *OAuthHandler) AddonOauth(w http.ResponseWriter, r *http.Request) {
 		session, err = h.store.CreateNewSession(w, r, postToken, return_url, isBuyer)
 		if err != nil {
 			log.Printf("Failed to create new session: %v", err)
-			http.Error(w, "Failed to create session: "+err.Error(), http.StatusInternalServerError)
+			utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در ایجاد سشن", err.Error())
 			return
 		}
 	}
@@ -128,14 +121,14 @@ func (h *OAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	session, err := h.store.GetExistingSession(w, r)
 	if err != nil {
 		log.Printf("Failed to get session: %v", err)
-		http.Error(w, "Failed to get session: "+err.Error(), http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در دریافت سشن", err.Error())
 		return
 	}
 
 	//check if state is the same as the one in the session
 	if session.State != state {
 		log.Printf("Invalid state: %s", state)
-		http.Error(w, "Invalid state", http.StatusBadRequest)
+		utils.HanleError(w, r, http.StatusBadRequest, "خطا در پردازش درخواست", "عدم مطابقت استیت سشن", "Invalid state")
 		return
 	}
 
@@ -143,7 +136,7 @@ func (h *OAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	token, err := h.oauthService.ExchangeToken(r.Context(), code)
 	if err != nil {
 		log.Printf("Failed to exchange token: %v", err)
-		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در دریافت توکن", err.Error())
 		return
 	}
 
@@ -159,7 +152,7 @@ func (h *OAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	properyDetail, err := h.kenarService.GetPropertyDetail(r.Context(), session.PostToken)
 	if err != nil {
 		log.Printf("Failed to get coordinates: %v", err)
-		http.Error(w, "Failed to get coordinates: "+err.Error(), http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در دریافت اطلاعات آگهی", err.Error())
 		return
 	}
 
@@ -188,13 +181,13 @@ func (h *OAuthHandler) OauthCallback(w http.ResponseWriter, r *http.Request) {
 	err = h.oauthService.RegisterAuthData(r.Context(), transactionData)
 	if err != nil {
 		log.Printf("Failed to register auth data: %v", err)
-		http.Error(w, "Failed to register auth data: "+err.Error(), http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "خطا در ثبت اطلاعات", err.Error())
 		return
 	}
 	jwtToken, err := h.jwt.CreateJwtToken(userDetail.UserId)
 	if err != nil {
 		log.Printf("Error creating jwt token: %v", err)
-		http.Error(w, "Error creating jwt token", http.StatusInternalServerError)
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطا در پردازش درخواست", "jwt خطا در ایجاد توکن", err.Error())
 		return
 	}
 
