@@ -66,7 +66,7 @@ func runMigrations(connURL string) error {
     defer m.Close()
 
     if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Printf("failed to apply migrations", err)
+		log.Printf("failed to apply migrations: %v", err)
 		return err
     }
 
