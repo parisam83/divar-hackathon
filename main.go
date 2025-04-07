@@ -19,10 +19,9 @@ import (
 )
 
 func main() {
-
 	conf, err := configs.LoadConfig()
 	if err != nil {
-		log.Fatalf("failed to load configurations: %s\n", err)
+		log.Fatalf("failed to load configurations: %v\n", err)
 	}
 
 	conPool, err := database.ConnectToDatabase(
@@ -40,17 +39,14 @@ func main() {
 		conf.Database.MaxConnIdleTimeMinutes,
 	)
 	if err != nil {
-		log.Fatal("Error in databse setup " + err.Error())
+		log.Fatalf("Error in databse setup: %v", err)
 	}
 
 	query := db.New(conPool)
 	sessionStore := utils.NewSessionStore(&conf.Session)
-	// fmt.Println(conf.Session.AuthKey)
-	// fmt.Println(reflect.ValueOf(conf.Session.AuthKey).Kind())
 	jwtManager := utils.NewJWTManager(&conf.Jwt)
 
 	snapp := transport.NewSnapp(&conf.Snapp)
-	// log.Println(conf.Snapp.ApiKey)
 	tapsi := transport.NewTapsi(&conf.Tapsi)
 	neshan := transport.NewNeshan(&conf.Neshan)
 	taxiService := services.NewTransportService(snapp, tapsi, neshan, query)

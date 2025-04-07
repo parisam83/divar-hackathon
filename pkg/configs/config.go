@@ -104,6 +104,7 @@ func LoadConfig() (*Config, error) {
 		log.Printf("Error reading config file: %v", err)
 		return nil, err
 	}
+
 	for _, key := range viper.AllKeys() {
 		value := viper.GetString(key)
 		expanded := os.ExpandEnv(value)
