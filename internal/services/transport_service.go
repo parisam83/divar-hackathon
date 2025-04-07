@@ -40,7 +40,7 @@ func (t *TransportService) GetPrice(ctx context.Context, originLat, originLong, 
 	for name, client := range t.priceProviders {
 		price, err := client.GetPriceEstimation(ctx, originLat, originLong, destinationLat, destinationLong)
 		if err != nil {
-			log.Printf("%s price error: %v", name, err)
+			log.Printf("error getting %s price: %v", name, err)
 			continue
 		}
 		switch name {
