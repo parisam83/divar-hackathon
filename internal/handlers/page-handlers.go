@@ -48,11 +48,14 @@ func (p *pageHandler) BuyerDashboardHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	hasPurchased, err := p.kenarService.CheckUserPurchase(r.Context(), postToken, userID)
+
 	// Render buyer template with data
 	data := map[string]interface{}{
 		"UserID":       userID,
 		"PostToken":    postToken,
 		"PropertyData": property,
+		"IsPurchased":  hasPurchased,
 	}
 	tmp, err := template.ParseFiles("./web/buyer_landing.html")
 	if err != nil {

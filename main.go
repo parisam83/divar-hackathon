@@ -71,6 +71,7 @@ func main() {
 	r.HandleFunc("/addon/oauth", oauthHandler.AddonOauth)
 	r.HandleFunc("/api/calculate-fare", kenarHandler.GetPrice)
 	r.HandleFunc("/api/find-amenities", jwtManager.JWTMiddlewear(kenarHandler.Poi))
+	r.HandleFunc("/api/record-purchase", jwtManager.JWTMiddlewear(kenarHandler.RecordPurchase))
 	r.HandleFunc("/api/add-to-ad", jwtManager.JWTMiddlewear(kenarHandler.AddLocationWidget))
 
 	r.HandleFunc("/api/get-origin", kenarHandler.GetOriginCoordinates).Methods("POST")

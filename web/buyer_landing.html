@@ -384,12 +384,17 @@
                     title: "{{if .PropertyData.Title}}{{.PropertyData.Title}}{{end}}",
                     latitude: "{{if .PropertyData.Latitude}}{{.PropertyData.Latitude}}{{else}}null{{end}}",
                     longitude: "{{if .PropertyData.Longitude}}{{.PropertyData.Longitude}}{{else}}null{{end}}"
-                }
+                },
+                isPurchased: "{{if .IsPurchased}}{{.IsPurchased}}{{else}}false{{end}}"
+
             };
+
     // Fallback to URL parameters if server data is missing
         const postToken = serverData.postToken|| '';
         let propertyLat = serverData.property.latitude;
         let propertyLng = serverData.property.longitude;
+        const isPurchased = (serverData.isPurchased === "true" || serverData.isPurchased === true);
+
         
         // Validate we have what we need
         const hasValidCoordinates = (
@@ -405,6 +410,25 @@
             updateStatusMessage('خطا: مختصات ملک معتبر نیست. امکان نمایش اطلاعات وجود ندارد.', 'error');
             disableAllFunctionality();
         }        
+        if (isPurchased) {
+            document.addEventListener('DOMContentLoaded', function() {
+                // Update UI to show already purchased
+                const priceTag = document.querySelector('.price-tag');
+                priceTag.innerHTML = "خریداری شده";
+                priceTag.style.backgroundColor = "#27ae60";
+                
+                // Change button text and remove matte style
+                const subwayButton = document.getElementById('subway-button');
+                subwayButton.innerHTML = "مشاهده اطلاعات";
+                
+                const subwayCard = document.getElementById('subway-card');
+                subwayCard.classList.remove('matte');
+                subwayCard.classList.add('interactive');
+                
+                // Automatically fetch and display content
+                fetchAmenitiesData();
+        });
+        }
         // const postToken = new URLSearchParams(window.location.search).get('post_token') || 'default_token';
         let amenitiesResults = null;
         
@@ -442,6 +466,40 @@
             
             // Always make sure the status is visible
             statusElement.style.display = 'block';
+        }
+
+        async function recordPurchase() {
+            try {
+                updateStatusMessage('در حال ثبت خرید...', 'loading');
+                
+                const response = await fetch('/api/record-purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        post_token: postToken,
+                    })
+                });
+                if (response.redirected) {
+                    console.log("Redirect detected to:", response.url);
+                    window.location.href = response.url;
+                    return { ok: false };
+                }
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    if (errorData.redirect) {
+                        window.location.href = errorData.redirect;
+                        return { ok: false };
+                    }
+                    throw new Error('خطا در ثبت خرید');
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error("Error recording purchase:", error);
+                updateStatusMessage('خطا در ثبت خرید. لطفا مجددا تلاش کنید.', 'error');
+                throw error;
+            }
         }
 
         // Function to find nearby amenities
@@ -624,6 +682,12 @@
             this.disabled = true;
             
             try {
+                if (!isPurchased) {
+                    const purchaseResult = await recordPurchase();
+                    if (purchaseResult && purchaseResult.ok === false) {
+                        return;
+                    }
+                }
                 // Get the amenities data
                 const results = await findNearbyPlaces();
                 

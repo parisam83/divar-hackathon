@@ -199,3 +199,32 @@ func (k *KenarHandler) GetOriginCoordinates(w http.ResponseWriter, r *http.Reque
 	}
 
 }
+
+func (k *KenarHandler) RecordPurchase(w http.ResponseWriter, r *http.Request) {
+	userId, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای احراز هویت", "کاربر شناسایی نشد", "User ID not found in context")
+		return
+	}
+	var req struct {
+		PostToken string `json:"post_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.HanleError(w, r, http.StatusBadRequest, "درخواست نامعتبر", "خطا در خواندن اطلاعات درخواست", err.Error())
+		return
+	}
+	err := k.kenarService.InsertPostPurchase(r.Context(), req.PostToken, userId)
+	if err != nil {
+		utils.HanleError(w, r, http.StatusInternalServerError, "خطای سیستمی", "خطا در ذخیره اطلاعات", err.Error())
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "خرید با موفقیت ثبت شد",
+		"data": map[string]interface{}{
+			"post_token": req.PostToken,
+		},
+	})
+
+}
