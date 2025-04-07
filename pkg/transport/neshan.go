@@ -108,7 +108,6 @@ func NewNeshan(s *configs.NeshanConfig) *Neshan {
 	return &Neshan{
 		apiKey: s.NeshanApiKey,
 	}
-
 }
 
 const (

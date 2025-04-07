@@ -30,7 +30,9 @@ type KenarConfig struct {
 	ApiKey      string `mapstructure:"KenarApiKey"`
 	OauthSecret string `mapstructure:"OauthSecret"`
 	BaseURL     string `mapstructure:"BaseUrl"`
+	OpenPlatformApi string `mapstructure:"OpenPlatformApi"`
 }
+
 type ServerConfig struct {
 	Port string `mapstructure:"Port"`
 }
@@ -77,8 +79,7 @@ type TapsiConfig struct {
 }
 
 func (cfg *KenarConfig) Validate() error {
-
-	if cfg.AppSlug == "" || cfg.OauthSecret == "" {
+	if cfg.AppSlug == "" || cfg.OauthSecret == "" || cfg.OpenPlatformApi == "" {
 		return fmt.Errorf("missing required OAuth configurations")
 	}
 	return nil
