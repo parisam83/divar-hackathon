@@ -110,9 +110,6 @@ func (s *OAuthService) RegisterAuthData(ctx context.Context, input *Transaction)
 			Valid:  true,
 		}
 	}
-	log.Println("************************")
-	log.Println(ownerID)
-	log.Println("************************")
 
 	result, err = qtx.InsertPost(ctx, db.InsertPostParams{
 		PostID:    input.PropertyDetail.PostID,

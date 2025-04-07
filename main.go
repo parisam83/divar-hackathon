@@ -122,13 +122,15 @@ func (a *App) setupRoutes() {
 	a.router.HandleFunc("/api/calculate-fare", a.handlers.kenar.GetPrice)
 	a.router.HandleFunc("/api/find-amenities", a.handlers.jwt.JWTMiddlewear(a.handlers.kenar.Poi))
 	a.router.HandleFunc("/api/add-to-ad", a.handlers.jwt.JWTMiddlewear(a.handlers.kenar.AddLocationWidget))
+	a.router.HandleFunc("/api/record-purchase", a.handlers.jwt.JWTMiddlewear(a.handlers.kenar.RecordPurchase))
 	a.router.HandleFunc("/api/get-origin", a.handlers.kenar.GetOriginCoordinates).Methods("POST")
 	a.router.HandleFunc("/oauth/callback", a.handlers.oauth.OauthCallback)
-	a.router.HandleFunc("/api/record-purchase", a.handlers.jwt.JWTMiddlewear(a.handlers.kenar.RecordPurchase))
 
 	// Frontend routes
-	a.router.HandleFunc("/api/seller/landing", a.handlers.page.SellerDashboardHandler).Methods("GET")
+	a.router.HandleFunc("/api/seller/landing", a.handlers.jwt.JWTMiddlewear(a.handlers.page.SellerDashboardHandler)).Methods("GET")
 	a.router.Handle("/api/buyer/landing", a.handlers.jwt.JWTMiddlewear(a.handlers.page.BuyerDashboardHandler)).Methods("GET")
+	a.router.Handle("/api/serve/amenities-page", a.handlers.jwt.JWTMiddlewear(a.handlers.page.AmenitiesPageHandler)).Methods("GET")
+	
 
 	// Static file server
 	htmlFileServer := http.FileServer(http.Dir("./web"))
