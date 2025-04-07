@@ -376,18 +376,16 @@
 
     <script type="text/javascript">
         const statusElement = document.getElementById('status-message');
+        const serverData = {
+            postToken: "{{if .PostToken}}{{.PostToken}}{{end}}",
+            property: {
+                title: "{{if .PropertyData.Title}}{{.PropertyData.Title}}{{end}}",
+                latitude: "{{if .PropertyData.Latitude}}{{.PropertyData.Latitude}}{{else}}null{{end}}",
+                longitude: "{{if .PropertyData.Longitude}}{{.PropertyData.Longitude}}{{else}}null{{end}}"
+            },
+            isPurchased: "{{if .IsPurchased}}{{.IsPurchased}}{{else}}false{{end}}"
 
-
-    const serverData = {
-        postToken: "{{if .PostToken}}{{.PostToken}}{{end}}",
-        property: {
-            title: "{{if .PropertyData.Title}}{{.PropertyData.Title}}{{end}}",
-            latitude: "{{if .PropertyData.Latitude}}{{.PropertyData.Latitude}}{{else}}null{{end}}",
-            longitude: "{{if .PropertyData.Longitude}}{{.PropertyData.Longitude}}{{else}}null{{end}}"
-        },
-        isPurchased: "{{if .IsPurchased}}{{.IsPurchased}}{{else}}false{{end}}"
-
-    };
+        };
 
     // Fallback to URL parameters if server data is missing
         const postToken = serverData.postToken|| '';
