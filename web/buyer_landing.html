@@ -375,6 +375,8 @@
     </div>
 
     <script type="text/javascript">
+        const statusElement = document.getElementById('status-message');
+
 
             const serverData = {
                 postToken: "{{if .PostToken}}{{.PostToken}}{{end}}",
@@ -396,9 +398,13 @@
             !isNaN(propertyLat) && 
             !isNaN(propertyLng)
         );
-        if (!hasValidCoordinates || !postToken) {
-            console.warn("Missing or invalid property data from server. Will attempt to fetch or use fallback.");
-        }
+        if (!postToken) {
+            updateStatusMessage('خطا: شناسه آگهی یافت نشد. لطفا مجددا آگهی را باز کنید.', 'error');
+            disableAllFunctionality();
+        } else if (!hasValidCoordinates) {
+            updateStatusMessage('خطا: مختصات ملک معتبر نیست. امکان نمایش اطلاعات وجود ندارد.', 'error');
+            disableAllFunctionality();
+        }        
         // const postToken = new URLSearchParams(window.location.search).get('post_token') || 'default_token';
         let amenitiesResults = null;
         
@@ -406,10 +412,23 @@
         document.getElementById('taxi-service').addEventListener('click', function() {
             window.location.href = `/static/taxi.html?post_token=${encodeURIComponent(postToken)}`;
         });
+
+        function disableAllFunctionality() {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = true;
+            });
+            
+            const interactiveCards = document.querySelectorAll('.interactive');
+            interactiveCards.forEach(card => {
+                card.classList.remove('interactive');
+                card.classList.add('matte');
+            });
+        }
+
         
         // Status update function
         function updateStatusMessage(message, type) {
-            const statusElement = document.getElementById('status-message');
             statusElement.textContent = message;
             statusElement.className = 'status-message';
             
@@ -420,6 +439,9 @@
             } else if (type === 'error') {
                 statusElement.classList.add('status-error');
             }
+            
+            // Always make sure the status is visible
+            statusElement.style.display = 'block';
         }
 
         // Function to find nearby amenities
@@ -437,15 +459,24 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         post_token: postToken,
-                        lat: propertyLat,
-                        lng: propertyLng
+                        lat: parseFloat(propertyLat),
+                        lng: parseFloat(propertyLng)
                     })
                 });
-                
-                if (!response.ok) {
-                    throw new Error('خطا در جستجوی امکانات نزدیک');
+                if (response.redirected) {
+                    console.log("Redirect detected to:", response.url);
+                    window.location.href = response.url;
+                    return { ok: false };
                 }
                 
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    if (errorData.redirect) {
+                        window.location.href = errorData.redirect;
+                        return { ok: false };
+                    }
+                    throw new Error('خطا در جستجوی امکانات نزدیک');
+                }
                 const data = await response.json();
                 return data;
             } catch (error) {
@@ -457,9 +488,12 @@
         // Display results function
         function displayResults(results) {
             console.log("Results received:", results);
-            amenitiesResults = results;
             
             try {
+                if (!results) {
+                       throw new Error('داده‌ای برای نمایش وجود ندارد');
+                }
+                amenitiesResults = results;
                 const resultsArea = document.getElementById('amenities-results');
                 resultsArea.innerHTML = '';
                 
@@ -573,6 +607,7 @@
             } catch (error) {
                 console.error("Error in displayResults:", error);
                 updateStatusMessage('خطا در نمایش نتایج', 'error');
+                resultsArea.style.display = 'none';
             }
         }
 
