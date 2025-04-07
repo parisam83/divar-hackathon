@@ -58,10 +58,7 @@ func (t *TransportService) GetPrice(ctx context.Context, originLat, originLong, 
 }
 
 func (s *TransportService) FindNearestStation(ctx context.Context, userId, postToken, originLat, originLong string) (*transport.NearbyPOIsResponse, error) {
-
 	//check if this user is a valid peerson using post purchase, tokens
-
-	// Convert string coordinates to float64
 	lat, err := strconv.ParseFloat(originLat, 64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid latitude: %w", err)
@@ -107,7 +104,6 @@ func (s *TransportService) FindNearestStation(ctx context.Context, userId, postT
 		return response, nil
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		log.Printf("Database error when checking cache: %v", err)
 		return nil, fmt.Errorf("error checking cache: %w", err)
 	}
 
