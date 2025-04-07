@@ -83,8 +83,9 @@ func main() {
 
 	// fileServer := http.FileServer(http.Dir("./web/static"))
 	// r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fileServer))
-	r.HandleFunc("/api/seller/landing", pageHandler.SellerDashboardHandler).Methods("GET")
-	r.Handle("/api/buyer/landing", jwtManager.JWTMiddlewear(pageHandler.BuyerDashboardHandler)).Methods("GET")
+	r.HandleFunc("/api/seller/landing", jwtManager.JWTMiddlewear(pageHandler.SellerDashboardHandler)).Methods("GET")
+	r.HandleFunc("/api/buyer/landing", jwtManager.JWTMiddlewear(pageHandler.BuyerDashboardHandler)).Methods("GET")
+	r.HandleFunc("/api/serve/amenities-page", jwtManager.JWTMiddlewear(pageHandler.AmenitiesPageHandler)).Methods("GET")
 	htmlFileServer := http.FileServer(http.Dir("./web"))
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", htmlFileServer))
 	r.HandleFunc("/error", utils.RenderErrorPage)

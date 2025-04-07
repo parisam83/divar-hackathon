@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/database/db"
 	"git.divar.cloud/divar/girls-hackathon/realestate-poi/pkg/transport"
@@ -263,4 +264,16 @@ func (k *KenarService) CheckUserPurchase(ctx context.Context, postToken string, 
 		return false, fmt.Errorf("could not fetch the realtion of user from post-purchase")
 	}
 	return hasPurchased, nil
+}
+
+func (k *KenarService) CheckPostOwnership(ctx context.Context, userId, postId string) (bool, error) {
+	log.Println("Checking if user is the owner of the post")
+	isOwner, err := k.queries.CheckPostOwnership(ctx, db.CheckPostOwnershipParams{
+		OwnerID: pgtype.Text{String: userId, Valid: true},
+		PostID:  postId,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to get post owner: %w", err)
+	}
+	return isOwner, nil
 }

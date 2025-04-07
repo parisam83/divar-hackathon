@@ -378,16 +378,16 @@
         const statusElement = document.getElementById('status-message');
 
 
-            const serverData = {
-                postToken: "{{if .PostToken}}{{.PostToken}}{{end}}",
-                property: {
-                    title: "{{if .PropertyData.Title}}{{.PropertyData.Title}}{{end}}",
-                    latitude: "{{if .PropertyData.Latitude}}{{.PropertyData.Latitude}}{{else}}null{{end}}",
-                    longitude: "{{if .PropertyData.Longitude}}{{.PropertyData.Longitude}}{{else}}null{{end}}"
-                },
-                isPurchased: "{{if .IsPurchased}}{{.IsPurchased}}{{else}}false{{end}}"
+    const serverData = {
+        postToken: "{{if .PostToken}}{{.PostToken}}{{end}}",
+        property: {
+            title: "{{if .PropertyData.Title}}{{.PropertyData.Title}}{{end}}",
+            latitude: "{{if .PropertyData.Latitude}}{{.PropertyData.Latitude}}{{else}}null{{end}}",
+            longitude: "{{if .PropertyData.Longitude}}{{.PropertyData.Longitude}}{{else}}null{{end}}"
+        },
+        isPurchased: "{{if .IsPurchased}}{{.IsPurchased}}{{else}}false{{end}}"
 
-            };
+    };
 
     // Fallback to URL parameters if server data is missing
         const postToken = serverData.postToken|| '';
@@ -410,6 +410,8 @@
             updateStatusMessage('خطا: مختصات ملک معتبر نیست. امکان نمایش اطلاعات وجود ندارد.', 'error');
             disableAllFunctionality();
         }        
+        sessionStorage.setItem('divarToken', postToken);
+        sessionStorage.setItem('redirectLink', "https://open-platform-redirect.divar.ir/completion");
         if (isPurchased) {
             document.addEventListener('DOMContentLoaded', function() {
                 // Update UI to show already purchased
@@ -434,7 +436,8 @@
         
         // Service selection handlers
         document.getElementById('taxi-service').addEventListener('click', function() {
-            window.location.href = `/static/taxi.html?post_token=${encodeURIComponent(postToken)}`;
+            window.location.href = `/web/taxi_buyer.html`;
+            return
         });
 
         function disableAllFunctionality() {

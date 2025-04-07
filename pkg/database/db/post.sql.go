@@ -14,9 +14,11 @@ import (
 
 const checkPostOwnership = `-- name: CheckPostOwnership :one
 SELECT 
-    CASE WHEN owner_id = $1 THEN true ELSE false END as is_owner
-FROM posts
-WHERE post_id = $2
+    EXISTS (
+        SELECT 1 
+        FROM posts 
+        WHERE owner_id = $1 AND post_id = $2
+    ) AS isOwner
 `
 
 type CheckPostOwnershipParams struct {
@@ -26,9 +28,9 @@ type CheckPostOwnershipParams struct {
 
 func (q *Queries) CheckPostOwnership(ctx context.Context, arg CheckPostOwnershipParams) (bool, error) {
 	row := q.db.QueryRow(ctx, checkPostOwnership, arg.OwnerID, arg.PostID)
-	var is_owner bool
-	err := row.Scan(&is_owner)
-	return is_owner, err
+	var isowner bool
+	err := row.Scan(&isowner)
+	return isowner, err
 }
 
 const getPost = `-- name: GetPost :one

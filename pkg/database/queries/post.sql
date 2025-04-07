@@ -41,9 +41,12 @@ RETURNING *;
 
 -- name: CheckPostOwnership :one
 SELECT 
-    CASE WHEN owner_id = $1 THEN true ELSE false END as is_owner
-FROM posts
-WHERE post_id = $2;
+    EXISTS (
+        SELECT 1 
+        FROM posts 
+        WHERE owner_id = $1 AND post_id = $2
+    ) AS isOwner;
+
 
 -- name: UpdatePostOwner :execresult
 UPDATE posts
